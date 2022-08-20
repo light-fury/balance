@@ -1,1 +1,1 @@
-# balance-vaults-contract
+# balance-contract
