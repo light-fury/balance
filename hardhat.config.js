@@ -23,8 +23,8 @@ task("accounts", "Prints the list of accounts", async () => {
  */
 module.exports = {
   networks: {
-    rinkeby: {
-      url: `https://eth-rinkeby.alchemyapi.io/v2/${alchemyApiKey}`,
+    goerli: {
+      url: `https://eth-goerli.g.alchemy.com/v2/${alchemyApiKey}`,
       accounts: [`${privateKey}`]
     },
     mainnet: {
@@ -70,7 +70,7 @@ module.exports = {
     // },
   },
   solidity: {
-    version: "0.8.14",
+    version: "0.8.16",
     settings: {
       optimizer: {
         enabled: true,
