@@ -18,10 +18,11 @@ struct VaultParams {
     uint fundingAmount;
     address[] allowedTokens;
     uint freezeTimestamp;
-    uint payoutTimestamp;
+    uint repaymentTimestamp;
     uint apr;
-    uint feeUsdb;
-    uint feeOther;
+    uint feeBorrower;
+    uint feeLenderUsdb;
+    uint feeLenderOther;
 }
 
 /// @notice Creates new balance vaults
@@ -29,24 +30,32 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
     using SafeERC20 for IERC20;
 
+    address public immutable DAO;
     address public immutable USDB;
 
     address public vaultTemplate;
     address public nftTemplate;
 
+    /// fee on borrowers total amount raised, 2 decimals percent, 100% is 10000
+    uint public feeBorrower;
     /// fee on lenders return in case usdb is used, 2 decimals percent, 100% is 10000
-    uint public feeUsdb;
+    uint public feeLenderUsdb;
     /// fee on lenders return in case other token is used, 2 decimals percent, 100% is 10000
-    uint public feeOther;
+    uint public feeLenderOther;
 
+    /// @param _DAO gnosis multisig address
     /// @param _USDB usdb address
-    /// @param _feeUsdb fee on lenders return in case usdb is used, 2 decimals percent, 100% is 10000
-    /// @param _feeOther fee on lenders return in case other token is used, 2 decimals percent, 100% is 10000
-    constructor(address _USDB, uint _feeUsdb, uint _feeOther) {
+    /// @param _feeBorrower fee on borrowers total amount raised, 2 decimals percent, 100% is 10000
+    /// @param _feeLenderUsdb fee on lenders return in case usdb is used, 2 decimals percent, 100% is 10000
+    /// @param _feeLenderOther fee on lenders return in case other token is used, 2 decimals percent, 100% is 10000
+    constructor(address _DAO, address _USDB, uint _feeBorrower, uint _feeLenderUsdb, uint _feeLenderOther) {
+        require(_DAO != address(0));
+        DAO = _DAO;
         require(_USDB != address(0));
         USDB = _USDB;
-        feeUsdb = _feeUsdb;
-        feeOther = _feeOther;
+        feeBorrower = _feeBorrower;
+        feeLenderUsdb = _feeLenderUsdb;
+        feeLenderOther = _feeLenderOther;
     }
 
     ///
@@ -75,7 +84,7 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
     /// @param _fundingAmount funding of the vault, with 18 decimals
     /// @param _allowedTokens allowed tokens which are 1:1 used for funding
     /// @param _freezeTimestamp timestamp to freeze this fundrising
-    /// @param _payoutTimestamp timestamp to the payout of given APR
+    /// @param _repaymentTimestamp timestamp to the payout of given APR
     /// @param _apr apr in 2 decimals, 10000 is 100%
     /// @return _vaultAddress actual address of preconfigured vault
     function createVault(
@@ -84,13 +93,13 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         uint _fundingAmount,
         address[] calldata _allowedTokens,
         uint _freezeTimestamp,
-        uint _payoutTimestamp,
+        uint _repaymentTimestamp,
         uint _apr
     ) external nonReentrant returns (address _vaultAddress) {
         require(vaultTemplate != address(0), "MISSING_VAULT_TEMPLATE");
         require(nftTemplate != address(0), "MISSING_NFT_TEMPLATE");
 
-        require(_freezeTimestamp < _payoutTimestamp, "VAULT_FREEZE_SHOULD_BE_BEFORE_PAYOUT");
+        require(_freezeTimestamp < _repaymentTimestamp, "VAULT_FREEZE_SHOULD_BE_BEFORE_PAYOUT");
         require(_freezeTimestamp > block.timestamp, "VAULT_FREEZE_SHOULD_BE_IN_FUTURE");
 
         // FIXME add links in separate array
@@ -107,10 +116,11 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         fundingAmount : _fundingAmount,
         allowedTokens : _allowedTokens,
         freezeTimestamp : _freezeTimestamp,
-        payoutTimestamp : _payoutTimestamp,
+        repaymentTimestamp : _repaymentTimestamp,
         apr : _apr,
-        feeUsdb : feeUsdb,
-        feeOther : feeOther
+        feeBorrower : feeBorrower,
+        feeLenderUsdb : feeLenderUsdb,
+        feeLenderOther : feeLenderOther
         });
         BalanceVault vault = BalanceVault(_vaultAddress);
         vault.initialize(param);
@@ -143,18 +153,25 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         nftTemplate = _nftTemplate;
     }
 
+    /// @notice sets fee for total amount raise
+    /// @param _feeBorrower fee on borrowers total amount raised, 2 decimals percent, 100% is 10000
+    function setFeeBorrower(uint _feeBorrower) external onlyOwner {
+        require(_feeBorrower < 2000, "FEE_TOO_HIGH");
+        feeBorrower = _feeBorrower;
+    }
+
     /// @notice sets fee for usdb token
-    /// @param _feeUsdb fee on lenders return in case usdb is used, 2 decimals percent, 100% is 10000
-    function setFeeUsdb(uint _feeUsdb) external onlyOwner {
-        require(_feeUsdb < 3000, "FEE_TOO_HIGH");
-        feeUsdb = _feeUsdb;
+    /// @param _feeLenderUsdb fee on lenders return in case usdb is used, 2 decimals percent, 100% is 10000
+    function setFeeLenderUsdb(uint _feeLenderUsdb) external onlyOwner {
+        require(_feeLenderUsdb < 5000, "FEE_TOO_HIGH");
+        feeLenderUsdb = _feeLenderUsdb;
     }
 
     /// @notice sets fee for other tokens
-    /// @param _feeOther fee on lenders return in case other token is used, 2 decimals percent, 100% is 10000
-    function setFeeOther(uint _feeOther) external onlyOwner {
-        require(_feeOther < 3000, "FEE_TOO_HIGH");
-        feeOther = _feeOther;
+    /// @param _feeLenderOther fee on lenders return in case other token is used, 2 decimals percent, 100% is 10000
+    function setFeeLenderOther(uint _feeLenderOther) external onlyOwner {
+        require(_feeLenderOther < 5000, "FEE_TOO_HIGH");
+        feeLenderOther = _feeLenderOther;
     }
 
     function recoverTokens(IERC20 token) external onlyOwner {

@@ -14,7 +14,6 @@ import "./BalanceVaultShare.sol";
 contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.UintSet;
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     /// name of the vault owner
@@ -32,19 +31,23 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     address public ownerWallet;
     /// unmodifiable funding amount with 18 decimals
     uint public fundingAmount;
-    /// unmodifiable timestamp to freeze this fundrising
+    /// unmodifiable timestamp to freeze this fundraising
     uint public freezeTimestamp;
     /// unmodifiable timestamp to the payout of given APR
-    uint public payoutTimestamp;
+    uint public repaymentTimestamp;
     /// unmodifiable apr in 2 decimals
     uint public apr;
 
     address public USDB;
-    uint public feeUsdb;
-    uint public feeOther;
+    uint public feeBorrower;
+    uint public feeLenderUsdb;
+    uint public feeLenderOther;
 
     /// unmodifiable allowed tokens which are 1:1 used for funding
     EnumerableSetUpgradeable.AddressSet internal allowedTokens;
+    bool public frozen;
+    bool public redeemPrepared;
+    uint public toRepayAmount;
 
     ///
     /// events
@@ -63,6 +66,14 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @param _tokens CAs from all previous amounts
     /// @param _tokenIds NFT token ids burnt from given user
     event Withdrawed(address indexed _user, uint[] _amounts, address[] _tokens, uint[] _tokenIds);
+
+    /// @notice vault frozen which means anyone cannot deposit or withdraw, users will wait until repayment
+    /// @param _timestamp timestamp of frozen
+    /// @param _amounts all amounts of fundraised funds
+    /// @param _tokens all tokens of fundraised funds
+    /// @param _toRepayAmount amount to repay
+    /// @param _token in which token it should be paid
+    event Frozen(uint _timestamp, uint[] _amounts, address[] _tokens, uint _toRepayAmount, address _token);
 
     ///
     ///
@@ -89,16 +100,38 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
 
         freezeTimestamp = _params.freezeTimestamp;
-        payoutTimestamp = _params.payoutTimestamp;
+        repaymentTimestamp = _params.repaymentTimestamp;
         apr = _params.apr;
-        USDB = manager.USDB();
-        feeUsdb = _params.feeUsdb;
-        feeOther = _params.feeOther;
+        feeBorrower = _params.feeBorrower;
+        feeLenderUsdb = _params.feeLenderUsdb;
+        feeLenderOther = _params.feeLenderOther;
     }
 
     ///
     /// business logic
     ///
+
+    /// @notice return of investment based on freeze timestamp and repayment timestamp
+    function roi(uint _amount) public view returns (uint) {
+        uint yieldSeconds = repaymentTimestamp - freezeTimestamp;
+        return _amount * yieldSeconds * apr / 10000 / 31536000;
+    }
+
+    /// @notice get current fundraised amount
+    /// @return _amounts amounts in _tokens tokens
+    function fundraised() public view returns (uint[] memory _amounts, address[] memory _tokens) {
+        uint[] memory amounts = new uint[](allowedTokens.length());
+        address[] memory tokens = allowedTokens.values();
+
+        for (uint i = 0; i < tokens.length; i++) {
+            IERC20Upgradeable token = IERC20Upgradeable(tokens[i]);
+            uint balance = token.balanceOf(address(this));
+            amounts[i] = balance;
+        }
+
+        _amounts = amounts;
+        _tokens = tokens;
+    }
 
     /// @notice return all NFTs of given user
     /// @param _owner user
@@ -191,7 +224,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice redeem all your NFTs for given APR in usdb
     function redeem() external nonReentrant {
-        // FIXME
+        require(redeemPrepared, "REDEEM_FUNDS_NOT_PREPARED");
     }
 
     /// @notice return item index in array if exists, or uint max if not
@@ -212,7 +245,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @param _tokens tokens
     /// @param _token token to add to set
     /// @return new array of tokens as a set
-    function withToken(address[] memory _tokens, address _token) internal view returns (address[] memory) {
+    function withToken(address[] memory _tokens, address _token) internal pure returns (address[] memory) {
         uint index = arrayIndex(_tokens, _token, _tokens.length);
 
         // token not in the list
@@ -231,7 +264,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @param _amount amount of token to add to amounts from set of tokens
     /// @param _token token to add to tokens set
     /// @return new array of amounts from set of tokens
-    function withAmount(uint[] memory _amounts, address[] memory _tokens, uint _amount, address _token) internal view returns (uint[] memory) {
+    function withAmount(uint[] memory _amounts, address[] memory _tokens, uint _amount, address _token) internal pure returns (uint[] memory) {
         require(_amounts.length == _tokens.length, "ARRAY_LEN_NOT_MATCH");
 
         uint index = arrayIndex(_tokens, _token, _tokens.length);
@@ -251,7 +284,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @param _amounts all amounts
     /// @param _tokens all tokens
     /// @return _newAmounts new amounts which are paired with _newTokens set, _newTokens set
-    function unique(uint[] memory _amounts, address[] memory _tokens) internal view returns (uint[] memory _newAmounts, address[] memory _newTokens) {
+    function unique(uint[] memory _amounts, address[] memory _tokens) internal pure returns (uint[] memory _newAmounts, address[] memory _newTokens) {
         require(_amounts.length == _tokens.length, "ARRAY_LEN_NOT_MATCH");
         if (_tokens.length == 1) return (_amounts, _tokens);
 
@@ -297,6 +330,8 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         string calldata _ownerDescription,
         string calldata _ownerContactInfo
     ) external onlyOwner {
+        require(!frozen, "ALREADY_FROZEN");
+
         ownerName = _ownerName;
         ownerDescription = _ownerDescription;
         ownerContactInfo = _ownerContactInfo;
@@ -304,11 +339,51 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice freeze vault, send fundraised funds into owners wallet, subtracted from vault fee
     function freeze() external nonReentrant onlyOwner {
-        // FIXME
+        require(!frozen, "ALREADY_FROZEN");
+        require(block.timestamp >= freezeTimestamp, "CANNOT_FREEZE_BEFORE_DEADLINE");
+
+        frozen = true;
+
+        uint[] memory amounts = new uint[](allowedTokens.length());
+        address[] memory tokens = allowedTokens.values();
+
+        uint totalAmount = 0;
+
+        for (uint i = 0; i < tokens.length; i++) {
+            IERC20Upgradeable token = IERC20Upgradeable(tokens[i]);
+            uint balance = token.balanceOf(address(this));
+            amounts[i] = balance;
+            totalAmount += balance;
+
+            uint yield = roi(balance);
+            if (address (token) == manager.USDB()) {
+                totalAmount += yield + yield * feeLenderUsdb / 10000;
+            } else {
+                totalAmount += yield + yield * feeLenderOther / 10000;
+            }
+
+            if (balance > 0) {
+                uint toDao = balance * feeBorrower / 10000;
+                uint toVaultOwner = balance - toDao;
+                token.safeTransfer(ownerWallet, toVaultOwner);
+                token.safeTransfer(manager.DAO(), toDao);
+            }
+        }
+
+        toRepayAmount = totalAmount;
+
+        emit Frozen(block.timestamp, amounts, tokens, toRepayAmount, tokens[0]);
     }
 
+    /// @notice send all funds for redeem
+    /// can be called before redeem timestamp
     function depositForRedeem() external nonReentrant onlyOwner {
-        // FIXME
+        require(frozen, "NOT_FROZEN");
+        require(!redeemPrepared, "REDEEM_ALREADY_PREPARED");
+
+        IERC20Upgradeable(allowedTokens.values()[0]).safeTransferFrom(msg.sender, address(this), toRepayAmount);
+
+        redeemPrepared = true;
     }
 
     function recoverTokens(IERC20Upgradeable token) external onlyOwner {
