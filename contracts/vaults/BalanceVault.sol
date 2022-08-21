@@ -9,6 +9,21 @@ import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeab
 
 import "./BalanceVaultManager.sol";
 import "./BalanceVaultShare.sol";
+import "../utils/ArrayUtils.sol";
+
+    struct VaultParams {
+        string[] ownerInfos;
+        address ownerWallet;
+        address nftAddress;
+        uint fundingAmount;
+        address[] allowedTokens;
+        uint freezeTimestamp;
+        uint repaymentTimestamp;
+        uint apr;
+        uint feeBorrower;
+        uint feeLenderUsdb;
+        uint feeLenderOther;
+    }
 
 /// @notice balance vault
 contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
@@ -74,6 +89,14 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @param _toRepayAmount amount to repay
     /// @param _token in which token it should be paid
     event Frozen(uint _timestamp, uint[] _amounts, address[] _tokens, uint _toRepayAmount, address _token);
+
+    /// @notice redeemed original deposit + yield
+    /// @param _user calling user
+    /// @param _tokenIds existing tokenIds
+    /// @param _amount amount redeemed
+    /// @param _fee fee sent to DAO
+    /// @param _token in which token
+    event Redeemed(address indexed _user, uint[] _tokenIds, uint _amount, uint _fee, address _token);
 
     ///
     ///
@@ -194,7 +217,8 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         // mint new state
         amounts = withAmount(amounts, tokens, _amount, _token);
         tokens = withToken(tokens, _token);
-        _tokenId = nft.mint(msg.sender, amounts, tokens);
+        uint returnOfInvestment = roi(1e9) * 10000 / 1e9;
+        _tokenId = nft.mint(msg.sender, amounts, tokens, apr, returnOfInvestment, repaymentTimestamp);
 
         emit Deposited(msg.sender, _amount, _token, _tokenId);
     }
@@ -226,9 +250,11 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function redeem() external nonReentrant {
         require(redeemPrepared, "REDEEM_FUNDS_NOT_PREPARED");
 
+        // get user holdings
         uint[] memory tokenIds = tokensOfOwner(msg.sender);
         require(tokenIds.length > 0, "NFTS_NOT_FOUND");
 
+        // count deposit, yield and fees
         (uint[] memory amounts, address[] memory tokens) = balanceOf(tokenIds);
         uint toRepay = 0;
         uint fee = 0;
@@ -242,23 +268,19 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             }
         }
 
-        require(toRepay <= toRepayAmount, "REPAY_OUT_OF_BOUNDS");
-        IERC20Upgradeable(allowedTokens.values()[0]).safeTransfer(msg.sender, toRepay);
-        IERC20Upgradeable(allowedTokens.values()[0]).safeTransfer(manager.DAO(), fee);
-    }
-
-    /// @notice return item index in array if exists, or uint max if not
-    /// @param _array array can be empty
-    /// @param _item item to search in array
-    /// @param _arrayLength array length in case not filled array
-    /// @return item index in array or uint max if not found
-    function arrayIndex(address[] memory _array, address _item, uint _arrayLength) internal pure returns (uint) {
-        require(_array.length >= _arrayLength, "ARR_LEN_TOO_BIG");
-
-        for (uint i = 0; i < _arrayLength; i++) {
-            if (_array[i] == _item) return i;
+        // burn user tokens
+        for (uint i = 0; i < tokenIds.length; i++) {
+            nft.burn(tokenIds[i]);
         }
-        return type(uint).max;
+
+        // remember in history
+        address token = allowedTokens.values()[0];
+        emit Redeemed(msg.sender, tokenIds, toRepay, fee, token);
+
+        // and sent tokens
+        require(toRepay <= toRepayAmount, "REPAY_OUT_OF_BOUNDS");
+        IERC20Upgradeable(token).safeTransfer(msg.sender, toRepay);
+        IERC20Upgradeable(token).safeTransfer(manager.DAO(), fee);
     }
 
     /// @notice construct new array of tokens as a set
@@ -266,7 +288,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @param _token token to add to set
     /// @return new array of tokens as a set
     function withToken(address[] memory _tokens, address _token) internal pure returns (address[] memory) {
-        uint index = arrayIndex(_tokens, _token, _tokens.length);
+        uint index = ArrayUtils.arrayIndex(_tokens, _token, _tokens.length);
 
         // token not in the list
         if (index == type(uint).max) {
@@ -287,7 +309,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function withAmount(uint[] memory _amounts, address[] memory _tokens, uint _amount, address _token) internal pure returns (uint[] memory) {
         require(_amounts.length == _tokens.length, "ARRAY_LEN_NOT_MATCH");
 
-        uint index = arrayIndex(_tokens, _token, _tokens.length);
+        uint index = ArrayUtils.arrayIndex(_tokens, _token, _tokens.length);
         // token not in the list
         if (index == type(uint).max) {
             uint[] memory newAmounts = new uint[](_tokens.length + 1);
@@ -313,7 +335,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address[] memory tmpTokens = new address[](_tokens.length);
 
         for (uint i = 0; i < _tokens.length; i++) {
-            uint index = arrayIndex(tmpTokens, _tokens[i], realTokenCount);
+            uint index = ArrayUtils.arrayIndex(tmpTokens, _tokens[i], realTokenCount);
             // token is not processed yet
             if (index == type(uint).max) {
                 tmpAmounts[realTokenCount] = _amounts[i];

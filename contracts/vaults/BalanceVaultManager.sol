@@ -10,20 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./BalanceVault.sol";
 import "./BalanceVaultShare.sol";
-
-struct VaultParams {
-    string[] ownerInfos;
-    address ownerWallet;
-    address nftAddress;
-    uint fundingAmount;
-    address[] allowedTokens;
-    uint freezeTimestamp;
-    uint repaymentTimestamp;
-    uint apr;
-    uint feeBorrower;
-    uint feeLenderUsdb;
-    uint feeLenderOther;
-}
+import "../utils/ArrayUtils.sol";
 
 /// @notice Creates new balance vaults
 contract BalanceVaultManager is Ownable, ReentrancyGuard {
@@ -42,6 +29,10 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
     uint public feeLenderUsdb;
     /// fee on lenders return in case other token is used, 2 decimals percent, 100% is 10000
     uint public feeLenderOther;
+
+    /// vetted tokens
+    address[] public allowedTokens;
+    mapping(address => bool) allowedTokensMapping;
 
     /// @param _DAO gnosis multisig address
     /// @param _USDB usdb address
@@ -104,6 +95,10 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
         // FIXME add links in separate array
         require(_ownerInfos.length == 3, "INFOS_MISSING");
+
+        for (uint i = 0; i < _allowedTokens.length; i++) {
+            require(allowedTokensMapping[_allowedTokens[i]], "TOKEN_NOT_ALLOWED");
+        }
 
         // EIP1167 clone factory
         _vaultAddress = Clones.clone(vaultTemplate);
@@ -172,6 +167,38 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
     function setFeeLenderOther(uint _feeLenderOther) external onlyOwner {
         require(_feeLenderOther < 5000, "FEE_TOO_HIGH");
         feeLenderOther = _feeLenderOther;
+    }
+
+    /// @notice add allowed token
+    /// @param _token token CA
+    function setAllowedToken(address _token) external onlyOwner {
+        address[] memory tokens = new address[](allowedTokens.length + 1);
+        for (uint i = 0; i < allowedTokens.length; i++) {
+            tokens[i] = allowedTokens[i];
+            require(allowedTokens[i] != _token, "TOKEN_ALREADY_USED");
+        }
+        tokens[allowedTokens.length] = _token;
+        allowedTokens = tokens;
+        allowedTokensMapping[_token] = true;
+    }
+
+    /// @notice remove allowed token
+    /// @param _token token to remove with its mapping
+    function removeAllowedToken(address _token) external onlyOwner {
+        uint index = ArrayUtils.arrayIndex(allowedTokens, _token, allowedTokens.length);
+        require(index != type(uint).max, "TOKEN_NOT_FOUND");
+
+        address[] memory tokens = new address[](allowedTokens.length - 1);
+        for (uint i = 0; i < allowedTokens.length; i++) {
+            if (i < index) tokens[i] = allowedTokens[i];
+            else if (i == index) continue;
+            else {
+                tokens[i - 1] = allowedTokens[i];
+            }
+        }
+
+        allowedTokens = tokens;
+        allowedTokensMapping[_token] = false;
     }
 
     function recoverTokens(IERC20 token) external onlyOwner {
