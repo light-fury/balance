@@ -225,6 +225,26 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice redeem all your NFTs for given APR in usdb
     function redeem() external nonReentrant {
         require(redeemPrepared, "REDEEM_FUNDS_NOT_PREPARED");
+
+        uint[] memory tokenIds = tokensOfOwner(msg.sender);
+        require(tokenIds.length > 0, "NFTS_NOT_FOUND");
+
+        (uint[] memory amounts, address[] memory tokens) = balanceOf(tokenIds);
+        uint toRepay = 0;
+        uint fee = 0;
+        for (uint i = 0; i < tokens.length; i++) {
+            uint returnOfInvestment = roi(amounts[i]);
+            toRepay += amounts[i] + returnOfInvestment;
+            if (tokens[i] == manager.USDB()) {
+                fee += returnOfInvestment * feeLenderUsdb / 10000;
+            } else {
+                fee += returnOfInvestment * feeLenderOther / 10000;
+            }
+        }
+
+        require(toRepay <= toRepayAmount, "REPAY_OUT_OF_BOUNDS");
+        IERC20Upgradeable(allowedTokens.values()[0]).safeTransfer(msg.sender, toRepay);
+        IERC20Upgradeable(allowedTokens.values()[0]).safeTransfer(manager.DAO(), fee);
     }
 
     /// @notice return item index in array if exists, or uint max if not
@@ -356,7 +376,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             totalAmount += balance;
 
             uint yield = roi(balance);
-            if (address (token) == manager.USDB()) {
+            if (address(token) == manager.USDB()) {
                 totalAmount += yield + yield * feeLenderUsdb / 10000;
             } else {
                 totalAmount += yield + yield * feeLenderOther / 10000;
