@@ -9,10 +9,12 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./BalanceVault.sol";
+import "./BalanceVaultShare.sol";
 
 struct VaultParams {
     string[] ownerInfos;
     address ownerWallet;
+    address nftAddress;
     uint fundingAmount;
     address[] allowedTokens;
     uint freezeTimestamp;
@@ -90,6 +92,8 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
         require(_freezeTimestamp < _payoutTimestamp, "VAULT_FREEZE_SHOULD_BE_BEFORE_PAYOUT");
         require(_freezeTimestamp > block.timestamp, "VAULT_FREEZE_SHOULD_BE_IN_FUTURE");
+
+        // FIXME add links in separate array
         require(_ownerInfos.length == 3, "INFOS_MISSING");
 
         // EIP1167 clone factory
@@ -99,6 +103,7 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         VaultParams memory param = VaultParams({
         ownerInfos : _ownerInfos,
         ownerWallet : _ownerWallet,
+        nftAddress : nftAddress,
         fundingAmount : _fundingAmount,
         allowedTokens : _allowedTokens,
         freezeTimestamp : _freezeTimestamp,
@@ -110,6 +115,11 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         BalanceVault vault = BalanceVault(_vaultAddress);
         vault.initialize(param);
         vault.transferOwnership(msg.sender);
+
+        BalanceVaultShare share = BalanceVaultShare(nftAddress);
+        share.initialize(_vaultAddress);
+        // owner of NFT is only for transferring tokens sent to NFT CA by mistake
+        share.transferOwnership(msg.sender);
 
         // remember in history
         emit VaultCreated(msg.sender, _vaultAddress, vaultTemplate, nftTemplate);
