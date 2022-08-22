@@ -23,8 +23,8 @@ task("accounts", "Prints the list of accounts", async () => {
  */
 module.exports = {
   networks: {
-    goerli: {
-      url: `https://eth-goerli.g.alchemy.com/v2/${alchemyApiKey}`,
+    rinkeby: {
+      url: `https://eth-rinkeby.alchemyapi.io/v2/${alchemyApiKey}`,
       accounts: [`${privateKey}`]
     },
     mainnet: {

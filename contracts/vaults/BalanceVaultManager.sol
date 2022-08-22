@@ -47,6 +47,8 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         feeBorrower = _feeBorrower;
         feeLenderUsdb = _feeLenderUsdb;
         feeLenderOther = _feeLenderOther;
+
+        setAllowedToken(_USDB);
     }
 
     ///
@@ -158,20 +160,20 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
     /// @notice sets fee for usdb token
     /// @param _feeLenderUsdb fee on lenders return in case usdb is used, 2 decimals percent, 100% is 10000
     function setFeeLenderUsdb(uint _feeLenderUsdb) external onlyOwner {
-        require(_feeLenderUsdb < 5000, "FEE_TOO_HIGH");
+        require(_feeLenderUsdb < 3000, "FEE_TOO_HIGH");
         feeLenderUsdb = _feeLenderUsdb;
     }
 
     /// @notice sets fee for other tokens
     /// @param _feeLenderOther fee on lenders return in case other token is used, 2 decimals percent, 100% is 10000
     function setFeeLenderOther(uint _feeLenderOther) external onlyOwner {
-        require(_feeLenderOther < 5000, "FEE_TOO_HIGH");
+        require(_feeLenderOther < 3000, "FEE_TOO_HIGH");
         feeLenderOther = _feeLenderOther;
     }
 
     /// @notice add allowed token
     /// @param _token token CA
-    function setAllowedToken(address _token) external onlyOwner {
+    function setAllowedToken(address _token) public onlyOwner {
         address[] memory tokens = new address[](allowedTokens.length + 1);
         for (uint i = 0; i < allowedTokens.length; i++) {
             tokens[i] = allowedTokens[i];
