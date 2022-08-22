@@ -9,10 +9,11 @@
     "@openzeppelin/contracts": "^4.5.0",
     "@openzeppelin/contracts-upgradeable": "^4.5.0",
     "@openzeppelin/hardhat-upgrades": "^1.16.1",
-    "erc721a-upgradeable": "^4.2.2",
     "@symblox/hardhat-abi-gen": "^0.2.0",
     "@types/mocha": "^9.1.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "erc721a": "^4.2.2",
+    "erc721a-upgradeable": "^4.2.2",
     "keccak256": "^1.0.6",
     "merkletreejs": "^0.2.31",
     "prand": "^0.0.3"
