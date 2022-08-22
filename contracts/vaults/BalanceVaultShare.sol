@@ -16,6 +16,8 @@ import "../utils/BokkyPooBahsDateTimeLibrary.sol";
     struct AmountInfo {
         uint[] amounts;
         address[] tokens;
+        string ownerName;
+        string ownerDescription;
         uint apr;
         uint roi;
         uint repaymentTimestamp;
@@ -54,6 +56,8 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
     /// @param _user depositor
     /// @param _amounts amounts of tokens provided into vault
     /// @param _tokens tokens provided into vault
+    /// @param _ownerName name of vault
+    /// @param _ownerDescription description of vault
     /// @param _apr given APR
     /// @param _roi given ROI
     /// @param _repaymentTimestamp repay timestamp
@@ -62,6 +66,8 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         address _user,
         uint[] calldata _amounts,
         address[] calldata _tokens,
+        string calldata _ownerName,
+        string calldata _ownerDescription,
         uint _apr,
         uint _roi,
         uint _repaymentTimestamp
@@ -75,6 +81,8 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         amountInfos[tokenId] = AmountInfo({
         amounts : _amounts,
         tokens : _tokens,
+        ownerName: _ownerName,
+        ownerDescription: _ownerDescription,
         apr : _apr,
         roi : _roi,
         repaymentTimestamp : _repaymentTimestamp
@@ -87,6 +95,15 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
 
     function getAmountInfos(uint _tokenId) external view returns (uint[] memory, address[] memory) {
         return (amountInfos[_tokenId].amounts, amountInfos[_tokenId].tokens);
+    }
+
+    function getOwnerName(uint _tokenId) internal view returns (string memory) {
+        string memory name = amountInfos[_tokenId].ownerName;
+        return string(abi.encodePacked(name, " (Balance Vault)"));
+    }
+
+    function getOwnerDescription(uint _tokenId) internal view returns (string memory) {
+        return amountInfos[_tokenId].ownerDescription;
     }
 
     function getRepayment(uint _tokenId) internal view returns (string memory) {
@@ -122,18 +139,20 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         ERC20Upgradeable token = ERC20Upgradeable(tokens[_index]);
         uint amount = amounts[_index] / token.decimals();
 
-        return string(abi.encodePacked(token.symbol(), ": ", amount));
+        return string(abi.encodePacked("Deposited: ", amount, " ", token.symbol()));
     }
 
     /**
      * @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
      */
     function tokenURI(uint tokenId) public view virtual override(IERC721AUpgradeable, ERC721AUpgradeable) returns (string memory) {
-        uint length = amountInfos[tokenId].tokens.length + 7;
+        uint length = amountInfos[tokenId].tokens.length + 9;
 
         uint index = 0;
         string[] memory parts = new string[](length);
         parts[index++] = '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 350 350"><style>.base { fill: white; font-family: serif; font-size: 14px; }</style><rect width="100%" height="100%" fill="#1a2c38" /><text x="10" y="20" class="base">';
+        parts[index++] = getOwnerName(tokenId);
+        parts[index++] = '</text><text x="10" y="40" class="base">';
         parts[index++] = getRepayment(tokenId);
         parts[index++] = '</text><text x="10" y="40" class="base">';
         parts[index++] = getApr(tokenId);
@@ -147,28 +166,19 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
 
         parts[index++] = "</text></svg>";
 
-        string memory output = string(
-            abi.encodePacked(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5])
-        );
+        string memory output = string(abi.encodePacked(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7]));
 
-        index = 6;
+        index = 8;
         for (uint i = 0; i < amountInfos[tokenId].tokens.length; i++) {
-            output = string(
-                        abi.encodePacked(
-                            output,
-                            parts[index++],
-                            parts[index++])
-                    );
-
+            output = string(abi.encodePacked(output, parts[index++], parts[index++]));
         }
+        output = string(abi.encodePacked(output, parts[index++]));
 
         string memory json = Base64Upgradeable.encode(
             bytes(
                 string(
-                    abi.encodePacked(
-                        '{"name": "Balance Vault Share #',
-                        StringsUpgradeable.toString(tokenId),
-                        '", "description": "Balance Vault Share FIXME", "image": "data:image/svg+xml;base64,',
+                    abi.encodePacked('{"name": ', '"', getOwnerName(tokenId), '- ', tokenId,
+                        '", "description": "', getOwnerDescription(tokenId),'", "image": "data:image/svg+xml;base64,',
                         Base64Upgradeable.encode(bytes(output)),
                         '"}'
                     )

@@ -13,6 +13,7 @@ import "../utils/ArrayUtils.sol";
 
     struct VaultParams {
         string[] ownerInfos;
+        string[] ownerContacts;
         address ownerWallet;
         address nftAddress;
         uint fundingAmount;
@@ -36,7 +37,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// description of the vault owner
     string public ownerDescription;
     /// contact info of the vault owner
-    string public ownerContactInfo;
+    string[] public ownerContacts;
 
     /// unmodifiable balance vault manager
     BalanceVaultManager public manager;
@@ -46,14 +47,13 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     address public ownerWallet;
     /// unmodifiable funding amount with 18 decimals
     uint public fundingAmount;
-    /// unmodifiable timestamp to freeze this fundraising
+    /// (can be moved to the future but not above repaymentTimestamp) timestamp to freeze this fundraising
     uint public freezeTimestamp;
     /// unmodifiable timestamp to the payout of given APR
     uint public repaymentTimestamp;
     /// unmodifiable apr in 2 decimals
     uint public apr;
 
-    address public USDB;
     uint public feeBorrower;
     uint public feeLenderUsdb;
     uint public feeLenderOther;
@@ -80,7 +80,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @param _amounts all amounts of all tokens
     /// @param _tokens CAs from all previous amounts
     /// @param _tokenIds NFT token ids burnt from given user
-    event Withdrawed(address indexed _user, uint[] _amounts, address[] _tokens, uint[] _tokenIds);
+    event Withdrawn(address indexed _user, uint[] _amounts, address[] _tokens, uint[] _tokenIds);
 
     /// @notice vault frozen which means anyone cannot deposit or withdraw, users will wait until repayment
     /// @param _timestamp timestamp of frozen
@@ -107,11 +107,11 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function initialize(VaultParams memory _params) initializer public {
         __Ownable_init();
         __ReentrancyGuard_init();
-        require(_params.ownerInfos.length == 3, "INFOS_MISSING");
+        require(_params.ownerInfos.length == 2, "INFOS_MISSING");
 
         ownerName = _params.ownerInfos[0];
         ownerDescription = _params.ownerInfos[1];
-        ownerContactInfo = _params.ownerInfos[2];
+        ownerContacts = _params.ownerContacts;
         ownerWallet = _params.ownerWallet;
 
         manager = BalanceVaultManager(msg.sender);
@@ -141,19 +141,17 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /// @notice get current fundraised amount
-    /// @return _amounts amounts in _tokens tokens
-    function fundraised() public view returns (uint[] memory _amounts, address[] memory _tokens) {
-        uint[] memory amounts = new uint[](allowedTokens.length());
-        address[] memory tokens = allowedTokens.values();
+    /// @return total amount fundraised summarized according to token decimals in 18 decimals
+    function fundraised() public view returns (uint) {
+        uint totalFundraised = 0;
 
+        address[] memory tokens = allowedTokens.values();
         for (uint i = 0; i < tokens.length; i++) {
-            IERC20Upgradeable token = IERC20Upgradeable(tokens[i]);
-            uint balance = token.balanceOf(address(this));
-            amounts[i] = balance;
+            ERC20Upgradeable token = ERC20Upgradeable(tokens[i]);
+            totalFundraised += token.balanceOf(address(this)) * 10 ** (18 - token.decimals());
         }
 
-        _amounts = amounts;
-        _tokens = tokens;
+        return totalFundraised;
     }
 
     /// @notice return all NFTs of given user
@@ -165,7 +163,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice get balances from all user NFTs
     /// @param _owner user
-    /// @return _amounts all user balance and, _tokens all user tokens
+    /// @return _amounts all user balance in tokens decimals and, _tokens all user tokens
     function balanceOf(address _owner) public view returns (uint[] memory _amounts, address[] memory _tokens) {
         uint[] memory tokenIds = tokensOfOwner(_owner);
         (_amounts, _tokens) = balanceOf(tokenIds);
@@ -173,7 +171,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice get balances from all user NFTs
     /// @param _tokenIds token ids which we want to count balance
-    /// @return _amounts all user balance and _tokens all user tokens
+    /// @return _amounts all user balance in token decimals and _tokens all user tokens
     function balanceOf(uint[] memory _tokenIds) public view returns (uint[] memory _amounts, address[] memory _tokens) {
         if (_tokenIds.length == 0) {
             _amounts = new uint[](0);
@@ -196,13 +194,23 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         (_amounts, _tokens) = unique(tmpAmounts, tmpTokens);
     }
 
+    /// @return true if timestamp > freezeTimestamp or hard cap was reached
+    function shouldBeFrozen() public view returns (bool) {
+        return block.timestamp > freezeTimestamp || fundraised() == fundingAmount;
+    }
+
     /// @notice deposit amount of given token into the vault
     /// @param _amount amount of token
     /// @param _token token ca
     /// @return _tokenId tokenId of currently minted nft
     function deposit(uint _amount, address _token) external nonReentrant returns (uint _tokenId) {
         require(allowedTokens.contains(_token), "TOKEN_NOT_WHITELISTED");
-        require(block.timestamp < freezeTimestamp, "VAULT_FROZEN");
+        require(!shouldBeFrozen(), "SHOULD_BE_FROZEN");
+
+        uint remaining = fundingAmount - fundraised();
+        uint remainingSameUnits = remaining / (18 - ERC20Upgradeable(_token).decimals());
+        require(_amount <= remainingSameUnits, "AMOUNT_TOO_BIG");
+
         IERC20Upgradeable(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         // collect previous deposits
@@ -218,7 +226,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         amounts = withAmount(amounts, tokens, _amount, _token);
         tokens = withToken(tokens, _token);
         uint returnOfInvestment = roi(1e9) * 10000 / 1e9;
-        _tokenId = nft.mint(msg.sender, amounts, tokens, apr, returnOfInvestment, repaymentTimestamp);
+        _tokenId = nft.mint(msg.sender, amounts, tokens, ownerName, ownerDescription, apr, returnOfInvestment, repaymentTimestamp);
 
         emit Deposited(msg.sender, _amount, _token, _tokenId);
     }
@@ -226,7 +234,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice premature withdraw all your funds from vault, burn all your nfts without get any APR
     function withdraw() external nonReentrant {
-        require(block.timestamp < freezeTimestamp, "VAULT_FROZEN");
+        require(!shouldBeFrozen(), "SHOULD_BE_FROZEN");
 
         // collect previous deposits
         uint[] memory tokenIds = tokensOfOwner(msg.sender);
@@ -238,7 +246,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
 
         // remember in history
-        emit Withdrawed(msg.sender, amounts, tokens, tokenIds);
+        emit Withdrawn(msg.sender, amounts, tokens, tokenIds);
 
         // withdraw
         for (uint i = 0; i < tokens.length; i++) {
@@ -366,23 +374,32 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice change description of existing vault, should not harm existing users
     /// @param _ownerName name of the vault owner
     /// @param _ownerDescription description of vault purpose
-    /// @param _ownerContactInfo contact info of vault owner
+    /// @param _ownerContacts contact info of vault owner
     function changeDescription(
         string calldata _ownerName,
         string calldata _ownerDescription,
-        string calldata _ownerContactInfo
+        string[] memory _ownerContacts
     ) external onlyOwner {
-        require(!frozen, "ALREADY_FROZEN");
+        require(!shouldBeFrozen(), "ALREADY_FROZEN");
 
         ownerName = _ownerName;
         ownerDescription = _ownerDescription;
-        ownerContactInfo = _ownerContactInfo;
+        ownerContacts = _ownerContacts;
+    }
+
+    /// @notice change freezeTimestamp to the future
+    /// @param _freezeTimestamp changed timestamp
+    function setFreezeTimestamp(uint _freezeTimestamp) external onlyOwner {
+        require(_freezeTimestamp >= freezeTimestamp, "NEW_VALUE_IS_BEFORE_OLD");
+        require(_freezeTimestamp < repaymentTimestamp, "SHOULD_BE_BEFORE_REPAYMENT");
+
+        freezeTimestamp = _freezeTimestamp;
     }
 
     /// @notice freeze vault, send fundraised funds into owners wallet, subtracted from vault fee
     function freeze() external nonReentrant onlyOwner {
         require(!frozen, "ALREADY_FROZEN");
-        require(block.timestamp >= freezeTimestamp, "CANNOT_FREEZE_BEFORE_DEADLINE");
+        require(shouldBeFrozen(), "SHOULDNT_BE_FROZEN");
 
         frozen = true;
 

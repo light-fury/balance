@@ -32,7 +32,7 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
     /// vetted tokens
     address[] public allowedTokens;
-    mapping(address => bool) allowedTokensMapping;
+    mapping(address => bool) public allowedTokensMapping;
 
     /// @param _DAO gnosis multisig address
     /// @param _USDB usdb address
@@ -72,7 +72,8 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
     ///
 
     /// @notice creates new vault
-    /// @param _ownerInfos name, description and contact info
+    /// @param _ownerInfos name, description
+    /// @param _ownerContacts contact info like twitter links, website, etc
     /// @param _ownerWallet wallet of the owner where funds will be managed
     /// @param _fundingAmount funding of the vault, with 18 decimals
     /// @param _allowedTokens allowed tokens which are 1:1 used for funding
@@ -82,6 +83,7 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
     /// @return _vaultAddress actual address of preconfigured vault
     function createVault(
         string[] calldata _ownerInfos,
+        string[] calldata _ownerContacts,
         address _ownerWallet,
         uint _fundingAmount,
         address[] calldata _allowedTokens,
@@ -95,8 +97,7 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         require(_freezeTimestamp < _repaymentTimestamp, "VAULT_FREEZE_SHOULD_BE_BEFORE_PAYOUT");
         require(_freezeTimestamp > block.timestamp, "VAULT_FREEZE_SHOULD_BE_IN_FUTURE");
 
-        // FIXME add links in separate array
-        require(_ownerInfos.length == 3, "INFOS_MISSING");
+        require(_ownerInfos.length == 2, "INFOS_MISSING");
 
         for (uint i = 0; i < _allowedTokens.length; i++) {
             require(allowedTokensMapping[_allowedTokens[i]], "TOKEN_NOT_ALLOWED");
@@ -108,6 +109,7 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
         VaultParams memory param = VaultParams({
         ownerInfos : _ownerInfos,
+        ownerContacts : _ownerContacts,
         ownerWallet : _ownerWallet,
         nftAddress : nftAddress,
         fundingAmount : _fundingAmount,
