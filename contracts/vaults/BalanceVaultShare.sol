@@ -13,14 +13,11 @@ import "erc721a-upgradeable/contracts/extensions/ERC721AQueryableUpgradeable.sol
 import "./BalanceVault.sol";
 import "../utils/BokkyPooBahsDateTimeLibrary.sol";
 
+// FIXME tokenuri is failing when deposited
+
     struct AmountInfo {
         uint[] amounts;
         address[] tokens;
-        string ownerName;
-        string ownerDescription;
-        uint apr;
-        uint roi;
-        uint repaymentTimestamp;
     }
 
 /// @notice Share of Balance Vault
@@ -35,7 +32,9 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
 
     /// @notice one time initialize
     /// @param _vault vault instance
-    function initialize(address _vault) initializerERC721A initializer public {
+    function initialize(
+        address _vault
+    ) initializerERC721A initializer public {
         __ERC721A_init('BalanceVaultShare', 'BALANCE-VAULT-SHARE');
         __Ownable_init();
 
@@ -56,21 +55,11 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
     /// @param _user depositor
     /// @param _amounts amounts of tokens provided into vault
     /// @param _tokens tokens provided into vault
-    /// @param _ownerName name of vault
-    /// @param _ownerDescription description of vault
-    /// @param _apr given APR
-    /// @param _roi given ROI
-    /// @param _repaymentTimestamp repay timestamp
     /// @return tokenId of currently minted token
     function mint(
         address _user,
         uint[] calldata _amounts,
-        address[] calldata _tokens,
-        string calldata _ownerName,
-        string calldata _ownerDescription,
-        uint _apr,
-        uint _roi,
-        uint _repaymentTimestamp
+        address[] calldata _tokens
     ) external returns (uint) {
         require(msg.sender == address(vault), "CALLER_NOT_VAULT");
         require(_user != address(0), "MISSING_USER");
@@ -80,12 +69,7 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         uint tokenId = _nextTokenId();
         amountInfos[tokenId] = AmountInfo({
         amounts : _amounts,
-        tokens : _tokens,
-        ownerName: _ownerName,
-        ownerDescription: _ownerDescription,
-        apr : _apr,
-        roi : _roi,
-        repaymentTimestamp : _repaymentTimestamp
+        tokens : _tokens
         });
 
         _mint(_user, 1);
@@ -97,49 +81,70 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         return (amountInfos[_tokenId].amounts, amountInfos[_tokenId].tokens);
     }
 
-    function getOwnerName(uint _tokenId) internal view returns (string memory) {
-        string memory name = amountInfos[_tokenId].ownerName;
-        return string(abi.encodePacked(name, " (Balance Vault)"));
+    function getOwnerName() internal view returns (string memory) {
+        return string(abi.encodePacked(vault.ownerName(), " (Balance Vault)"));
     }
 
-    function getOwnerDescription(uint _tokenId) internal view returns (string memory) {
-        return amountInfos[_tokenId].ownerDescription;
+    function getOwnerDescription() internal view returns (string memory) {
+        return vault.ownerDescription();
     }
 
-    function getRepayment(uint _tokenId) internal view returns (string memory) {
-        uint timestamp = amountInfos[_tokenId].repaymentTimestamp;
-        if (timestamp == 0) return "Undefined";
+    function getRepayment() internal view returns (string memory) {
+        uint timestamp = vault.repaymentTimestamp();
+        if (timestamp == 0) return "No repayment";
 
-        uint year = BokkyPooBahsDateTimeLibrary.getYear(timestamp);
+        string memory yearStr = StringsUpgradeable.toString(BokkyPooBahsDateTimeLibrary.getYear(timestamp));
+
         uint month = BokkyPooBahsDateTimeLibrary.getMonth(timestamp);
+        string memory monthStr = StringsUpgradeable.toString(month);
+        if (month < 10) {
+            monthStr = string(abi.encodePacked("0", monthStr));
+        }
+
         uint day = BokkyPooBahsDateTimeLibrary.getDay(timestamp);
+        string memory dayStr = StringsUpgradeable.toString(day);
+        if (day < 10) {
+            dayStr = string(abi.encodePacked("0", dayStr));
+        }
+
         uint hour = BokkyPooBahsDateTimeLibrary.getHour(timestamp);
+        string memory hourStr = StringsUpgradeable.toString(hour);
+        if (hour < 10) {
+            hourStr = string(abi.encodePacked("0", hourStr));
+        }
+
         uint minute = BokkyPooBahsDateTimeLibrary.getMinute(timestamp);
-        return string(abi.encodePacked("Repayment: ", year, "/", month, "/", day, " ", hour, ":", minute));
+        string memory minuteStr = StringsUpgradeable.toString(minute);
+        if (minute < 10) {
+            minuteStr = string(abi.encodePacked("0", minuteStr));
+        }
+
+        return string(abi.encodePacked("Repayment: ", yearStr, "/", monthStr, "/", dayStr, " ", hourStr, ":", minuteStr));
     }
 
-    function getApr(uint tokenId) internal view returns (string memory) {
-        uint apr = amountInfos[tokenId].apr;
-        if (apr == 0) return "Undefined";
-        return string(abi.encodePacked("APR: ", (apr / 100), "%"));
+    function getApr() internal view returns (string memory) {
+        uint apr = vault.apr();
+        if (apr == 0) return "No APR";
+        return string(abi.encodePacked("APR: ", StringsUpgradeable.toString(apr / 100), "%"));
     }
 
-    function getRoi(uint tokenId) internal view returns (string memory) {
-        uint roi = amountInfos[tokenId].roi;
-        if (roi == 0) return "Undefined";
-        return string(abi.encodePacked("ROI: ", (roi / 100), "%"));
+    function getRoi() internal view returns (string memory) {
+        uint roi = vault.roi(1e9) * 10000 / 1e9;
+        if (roi == 0) return "No ROI";
+        return string(abi.encodePacked("ROI: ", StringsUpgradeable.toString(roi / 100), "%"));
     }
 
-    function getTokenAmount(uint _tokenId, uint _index) internal view returns (string memory) {
-        address[] memory tokens = amountInfos[_tokenId].tokens;
+    function getTokenAmount(uint _tokenId, uint _index) public view returns (string memory) {
         uint[] memory amounts = amountInfos[_tokenId].amounts;
+        address[] memory tokens = amountInfos[_tokenId].tokens;
 
-        if (tokens.length == 0 || _index >= tokens.length) return "Undefined";
+        if (tokens.length == 0 || _index >= tokens.length) return "No deposits";
 
         ERC20Upgradeable token = ERC20Upgradeable(tokens[_index]);
-        uint amount = amounts[_index] / token.decimals();
+        // FIXME weth decimals
+        uint amount = amounts[_index] / (10 ** token.decimals());
 
-        return string(abi.encodePacked("Deposited: ", amount, " ", token.symbol()));
+        return string(abi.encodePacked("Deposited: ", StringsUpgradeable.toString(amount), " ", token.symbol()));
     }
 
     /**
@@ -150,17 +155,18 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
 
         uint index = 0;
         string[] memory parts = new string[](length);
-        parts[index++] = '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 350 350"><style>.base { fill: white; font-family: serif; font-size: 14px; }</style><rect width="100%" height="100%" fill="#1a2c38" /><text x="10" y="20" class="base">';
-        parts[index++] = getOwnerName(tokenId);
+        parts[index++] = '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 420 420"><style>.base { fill: white; font-family: serif; font-size: 14px; }</style><rect width="100%" height="100%" fill="#1a2c38" /><text x="10" y="20" class="base">';
+        parts[index++] = getOwnerName();
         parts[index++] = '</text><text x="10" y="40" class="base">';
-        parts[index++] = getRepayment(tokenId);
-        parts[index++] = '</text><text x="10" y="40" class="base">';
-        parts[index++] = getApr(tokenId);
-        parts[index++] = '</text><text x="10" y="40" class="base">';
-        parts[index++] = getRoi(tokenId);
+        parts[index++] = getRepayment();
+        parts[index++] = '</text><text x="10" y="60" class="base">';
+        parts[index++] = getApr();
+        parts[index++] = '</text><text x="10" y="80" class="base">';
+        parts[index++] = getRoi();
 
+        // starts with 8
         for (uint i = 0; i < amountInfos[tokenId].tokens.length; i++) {
-            parts[index++] = '</text><text x="10" y="40" class="base">';
+            parts[index] = string(abi.encodePacked('</text><text x="10" y="', StringsUpgradeable.toString(20 + 10 * index++),'" class="base">'));
             parts[index++] = getTokenAmount(tokenId, i);
         }
 
@@ -177,10 +183,10 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         string memory json = Base64Upgradeable.encode(
             bytes(
                 string(
-                    abi.encodePacked('{"name": ', '"', getOwnerName(tokenId), '- ', tokenId,
-                        '", "description": "', getOwnerDescription(tokenId),'", "image": "data:image/svg+xml;base64,',
-                        Base64Upgradeable.encode(bytes(output)),
-                        '"}'
+                    abi.encodePacked('{"name": ', '"', getOwnerName(), ' - ', StringsUpgradeable.toString(tokenId),
+                    '", "description": "', getOwnerDescription(), '", "image": "data:image/svg+xml;base64,',
+                    Base64Upgradeable.encode(bytes(output)),
+                    '"}'
                     )
                 )
             )

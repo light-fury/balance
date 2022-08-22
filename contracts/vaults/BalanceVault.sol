@@ -30,6 +30,7 @@ import "../utils/ArrayUtils.sol";
 contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20Upgradeable for ERC20Upgradeable;
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     /// name of the vault owner
@@ -62,6 +63,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     EnumerableSetUpgradeable.AddressSet internal allowedTokens;
     bool public frozen;
     bool public redeemPrepared;
+    /// to repay amount in repay token decimals
     uint public toRepayAmount;
 
     ///
@@ -134,7 +136,9 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// business logic
     ///
 
-    /// @notice return of investment based on freeze timestamp and repayment timestamp
+    /// @notice ROI
+    /// @param _amount amount with which its counted
+    /// @return return of investment based on freeze timestamp and repayment timestamp
     function roi(uint _amount) public view returns (uint) {
         uint yieldSeconds = repaymentTimestamp - freezeTimestamp;
         return _amount * yieldSeconds * apr / 10000 / 31536000;
@@ -208,7 +212,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(!shouldBeFrozen(), "SHOULD_BE_FROZEN");
 
         uint remaining = fundingAmount - fundraised();
-        uint remainingSameUnits = remaining / (18 - ERC20Upgradeable(_token).decimals());
+        uint remainingSameUnits = remaining / 10 ** (18 - ERC20Upgradeable(_token).decimals());
         require(_amount <= remainingSameUnits, "AMOUNT_TOO_BIG");
 
         IERC20Upgradeable(_token).safeTransferFrom(msg.sender, address(this), _amount);
@@ -225,8 +229,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         // mint new state
         amounts = withAmount(amounts, tokens, _amount, _token);
         tokens = withToken(tokens, _token);
-        uint returnOfInvestment = roi(1e9) * 10000 / 1e9;
-        _tokenId = nft.mint(msg.sender, amounts, tokens, ownerName, ownerDescription, apr, returnOfInvestment, repaymentTimestamp);
+        _tokenId = nft.mint(msg.sender, amounts, tokens);
 
         emit Deposited(msg.sender, _amount, _token, _tokenId);
     }
@@ -392,6 +395,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function setFreezeTimestamp(uint _freezeTimestamp) external onlyOwner {
         require(_freezeTimestamp >= freezeTimestamp, "NEW_VALUE_IS_BEFORE_OLD");
         require(_freezeTimestamp < repaymentTimestamp, "SHOULD_BE_BEFORE_REPAYMENT");
+        require(!frozen, "ALREADY_FROZEN");
 
         freezeTimestamp = _freezeTimestamp;
     }
@@ -406,15 +410,19 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint[] memory amounts = new uint[](allowedTokens.length());
         address[] memory tokens = allowedTokens.values();
 
+        // total amount in 18 decimals
         uint totalAmount = 0;
 
         for (uint i = 0; i < tokens.length; i++) {
-            IERC20Upgradeable token = IERC20Upgradeable(tokens[i]);
+            ERC20Upgradeable token = ERC20Upgradeable(tokens[i]);
             uint balance = token.balanceOf(address(this));
             amounts[i] = balance;
-            totalAmount += balance;
+            uint balanceSameUnits = balance * 10 ** (18 - token.decimals());
+            // add 100% of investment to return
+            totalAmount += balanceSameUnits;
 
-            uint yield = roi(balance);
+            // add ROI to lender and fee to DAO from lenders return
+            uint yield = roi(balanceSameUnits);
             if (address(token) == manager.USDB()) {
                 totalAmount += yield + yield * feeLenderUsdb / 10000;
             } else {
@@ -429,9 +437,11 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             }
         }
 
-        toRepayAmount = totalAmount;
+        // set repayment amount in repay token decimals
+        address repayToken = tokens[0];
+        toRepayAmount = totalAmount / 10 ** (18 - ERC20Upgradeable(repayToken).decimals());
 
-        emit Frozen(block.timestamp, amounts, tokens, toRepayAmount, tokens[0]);
+        emit Frozen(block.timestamp, amounts, tokens, toRepayAmount, repayToken);
     }
 
     /// @notice send all funds for redeem
