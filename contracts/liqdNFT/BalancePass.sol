@@ -5,7 +5,6 @@ import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract BalancePass is ERC721A, Ownable {
-
   /* ================== EVENTS ========================== */
   event NftMinted(address indexed user, uint256 tokenId);
 
@@ -16,14 +15,14 @@ contract BalancePass is ERC721A, Ownable {
 
   bool public whitelistMintStatus;
 
-  mapping(uint256 => uint256[][]) tokenTypeArray;
-  mapping(uint256 => TokenType) tokenType;
+  mapping(uint256 => uint256[][]) public tokenTypeArray;
+  mapping(uint256 => TokenType) public tokenType;
 
   /* ================ STRUCTS ========================= */
   enum TokenType {
+    PLATINUM,
     SILVER,
-    GOLD,
-    PLATINUM
+    GOLD
   }
 
   /* ================= INITIALIZATION =================== */
