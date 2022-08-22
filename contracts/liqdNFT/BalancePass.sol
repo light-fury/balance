@@ -15,15 +15,7 @@ contract BalancePass is ERC721A, Ownable {
 
   bool public whitelistMintStatus;
 
-  mapping(uint256 => uint256[][]) public tokenTypeArray;
-  mapping(uint256 => TokenType) public tokenType;
-
-  /* ================ STRUCTS ========================= */
-  enum TokenType {
-    PLATINUM,
-    SILVER,
-    GOLD
-  }
+  mapping(uint8 => uint256[][]) public tokenTypeArray;
 
   /* ================= INITIALIZATION =================== */
   /** 
@@ -62,16 +54,13 @@ contract BalancePass is ERC721A, Ownable {
   /**
         @notice set token types of token ID
         @param _tokenIdInfo uint256 2d array 
-        @param _tokenType enum TokenType
-        @param _tokenTypeSequence uint256
+        @param _tokenType uint8 0: Platinum 1: Silver 2: Gold
      */
-  function setTokenType(
-    uint256[][] memory _tokenIdInfo,
-    TokenType _tokenType,
-    uint256 _tokenTypeSequence
-  ) external onlyOwner {
-    tokenTypeArray[_tokenTypeSequence] = _tokenIdInfo;
-    tokenType[_tokenTypeSequence] = _tokenType;
+  function setTokenType(uint256[][] memory _tokenIdInfo, uint8 _tokenType)
+    external
+    onlyOwner
+  {
+    tokenTypeArray[_tokenType] = _tokenIdInfo;
   }
 
   /**
@@ -156,16 +145,19 @@ contract BalancePass is ERC721A, Ownable {
   /**
         @notice return tokenTypes based on tokenId
         @param _tokenId uint256
-        @return // TokenType
+        @return // string
      */
-  function getTokenType(uint256 _tokenId) public view returns (TokenType) {
-    for (uint256 i = 0; i < 3; i++) {
+  function getTokenType(uint256 _tokenId) public view returns (string memory) {
+    for (uint8 i = 0; i < 3; i++) {
       uint256[][] memory temp = tokenTypeArray[i];
       for (uint256 j = 0; j < temp.length; j++) {
         if (_tokenId >= temp[j][0] && _tokenId < temp[j][1])
-          return tokenType[i];
+          if (i == 0) return "Platinum";
+          else if (i == 1) return "Silver";
+          else return "Gold";
       }
     }
+    return "Undefined";
   }
 
   /// @notice current Token ID
