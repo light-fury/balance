@@ -63,7 +63,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     EnumerableSetUpgradeable.AddressSet internal allowedTokens;
     bool public frozen;
     bool public redeemPrepared;
-    /// to repay amount in repay token decimals
+    /// to repay amount in repay token (allowedTokens[0]) decimals
     uint public toRepayAmount;
 
     ///
@@ -158,6 +158,12 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return totalFundraised;
     }
 
+    /// @notice get address of repay token
+    /// @return repay token address
+    function repayToken() public view returns (address) {
+        return allowedTokens.values()[0];
+    }
+
     /// @notice return all NFTs of given user
     /// @param _owner user
     /// @return all token ids of given user
@@ -241,6 +247,8 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // collect previous deposits
         uint[] memory tokenIds = tokensOfOwner(msg.sender);
+        require(tokenIds.length > 0, "NFTS_NOT_FOUND");
+
         (uint[] memory amounts, address[] memory tokens) = balanceOf(tokenIds);
 
         // burn previous state
@@ -257,7 +265,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
-    /// @notice redeem all your NFTs for given APR in usdb
+    /// @notice redeem all your NFTs for given APR in usdb, can technically be redeemed before repaymentTimestamp passed
     function redeem() external nonReentrant {
         require(redeemPrepared, "REDEEM_FUNDS_NOT_PREPARED");
 
@@ -265,17 +273,19 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint[] memory tokenIds = tokensOfOwner(msg.sender);
         require(tokenIds.length > 0, "NFTS_NOT_FOUND");
 
-        // count deposit, yield and fees
+        // count deposit, yield and fees in repay token
         (uint[] memory amounts, address[] memory tokens) = balanceOf(tokenIds);
-        uint toRepay = 0;
-        uint fee = 0;
+        uint toRepaySameUnits = 0;
+        uint feeSameUnits = 0;
         for (uint i = 0; i < tokens.length; i++) {
-            uint returnOfInvestment = roi(amounts[i]);
-            toRepay += amounts[i] + returnOfInvestment;
+            uint amountSameUnits = amounts[i] * 10 ** (18 - ERC20Upgradeable(tokens[i]).decimals());
+            uint roiSameUnits = roi(amountSameUnits);
+
+            toRepaySameUnits += amountSameUnits + roiSameUnits;
             if (tokens[i] == manager.USDB()) {
-                fee += returnOfInvestment * feeLenderUsdb / 10000;
+                feeSameUnits += roiSameUnits * feeLenderUsdb / 10000;
             } else {
-                fee += returnOfInvestment * feeLenderOther / 10000;
+                feeSameUnits += roiSameUnits * feeLenderOther / 10000;
             }
         }
 
@@ -285,13 +295,16 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
 
         // remember in history
-        address token = allowedTokens.values()[0];
-        emit Redeemed(msg.sender, tokenIds, toRepay, fee, token);
+        ERC20Upgradeable token = ERC20Upgradeable(repayToken());
+        uint toRepayInRepayToken = toRepaySameUnits / 10 ** (18 - token.decimals());
+        uint feeInRepayToken = feeSameUnits / 10 ** (18 - token.decimals());
+
+        emit Redeemed(msg.sender, tokenIds, toRepayInRepayToken, feeInRepayToken, address(token));
 
         // and sent tokens
-        require(toRepay <= toRepayAmount, "REPAY_OUT_OF_BOUNDS");
-        IERC20Upgradeable(token).safeTransfer(msg.sender, toRepay);
-        IERC20Upgradeable(token).safeTransfer(manager.DAO(), fee);
+        require(toRepayInRepayToken <= toRepayAmount, "REPAY_OUT_OF_BOUNDS");
+        token.safeTransfer(msg.sender, toRepayInRepayToken);
+        token.safeTransfer(manager.DAO(), feeInRepayToken);
     }
 
     /// @notice construct new array of tokens as a set
@@ -395,7 +408,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function setFreezeTimestamp(uint _freezeTimestamp) external onlyOwner {
         require(_freezeTimestamp >= freezeTimestamp, "NEW_VALUE_IS_BEFORE_OLD");
         require(_freezeTimestamp < repaymentTimestamp, "SHOULD_BE_BEFORE_REPAYMENT");
-        require(!frozen, "ALREADY_FROZEN");
+        require(!shouldBeFrozen(), "SHOULDNT_BE_FROZEN");
 
         freezeTimestamp = _freezeTimestamp;
     }
@@ -403,7 +416,7 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice freeze vault, send fundraised funds into owners wallet, subtracted from vault fee
     function freeze() external nonReentrant onlyOwner {
         require(!frozen, "ALREADY_FROZEN");
-        require(shouldBeFrozen(), "SHOULDNT_BE_FROZEN");
+        require(shouldBeFrozen(), "SHOULD_BE_FROZEN");
 
         frozen = true;
 
@@ -438,10 +451,10 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
 
         // set repayment amount in repay token decimals
-        address repayToken = tokens[0];
-        toRepayAmount = totalAmount / 10 ** (18 - ERC20Upgradeable(repayToken).decimals());
+        ERC20Upgradeable _repayToken = ERC20Upgradeable(repayToken());
+        toRepayAmount = totalAmount / 10 ** (18 - _repayToken.decimals());
 
-        emit Frozen(block.timestamp, amounts, tokens, toRepayAmount, repayToken);
+        emit Frozen(block.timestamp, amounts, tokens, toRepayAmount, address(_repayToken));
     }
 
     /// @notice send all funds for redeem
@@ -450,9 +463,9 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(frozen, "NOT_FROZEN");
         require(!redeemPrepared, "REDEEM_ALREADY_PREPARED");
 
-        IERC20Upgradeable(allowedTokens.values()[0]).safeTransferFrom(msg.sender, address(this), toRepayAmount);
-
         redeemPrepared = true;
+
+        IERC20Upgradeable(repayToken()).safeTransferFrom(msg.sender, address(this), toRepayAmount);
     }
 
     function recoverTokens(IERC20Upgradeable token) external onlyOwner {
