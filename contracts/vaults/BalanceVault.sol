@@ -396,7 +396,9 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         string calldata _ownerDescription,
         string[] memory _ownerContacts
     ) external onlyOwner {
-        require(!shouldBeFrozen(), "ALREADY_FROZEN");
+        require(!shouldBeFrozen(), "SHOULDNT_BE_FROZEN");
+        require(!frozen, "ALREADY_FROZEN");
+        require(!redeemPrepared, "REDEEM_PREPARED");
 
         ownerName = _ownerName;
         ownerDescription = _ownerDescription;

@@ -14,6 +14,7 @@ import "./BalanceVault.sol";
 import "../utils/BokkyPooBahsDateTimeLibrary.sol";
 
 // FIXME tokenuri is failing when deposited
+// FIXME weth deposits
 
     struct AmountInfo {
         uint[] amounts;
@@ -48,7 +49,7 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         require(msg.sender == address(vault), "CALLER_NOT_VAULT");
 
         delete amountInfos[_tokenId];
-        _burn(_tokenId, true);
+        _burn(_tokenId, false);
     }
 
     /// @notice mints recipe share to the user
@@ -141,17 +142,17 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         if (tokens.length == 0 || _index >= tokens.length) return "No deposits";
 
         ERC20Upgradeable token = ERC20Upgradeable(tokens[_index]);
-        // FIXME weth decimals
+        // FIXME weth decimals maybe show also last 2 digits
         uint amount = amounts[_index] / (10 ** token.decimals());
 
         return string(abi.encodePacked("Deposited: ", StringsUpgradeable.toString(amount), " ", token.symbol()));
     }
 
-    /**
-     * @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
-     */
-    function tokenURI(uint tokenId) public view virtual override(IERC721AUpgradeable, ERC721AUpgradeable) returns (string memory) {
-        uint length = amountInfos[tokenId].tokens.length + 9;
+    /// @notice returns image in plain text
+    /// @param _tokenId token id
+    /// @return image for base64 encoding into manifest
+    function getImagePlainText(uint _tokenId) public view returns (string memory) {
+        uint length = /* 2x end/start text tag plus amount */ 2 * amountInfos[_tokenId].tokens.length + 9 /* 8 in header + 1 in footer */;
 
         uint index = 0;
         string[] memory parts = new string[](length);
@@ -165,35 +166,45 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         parts[index++] = getRoi();
 
         // starts with 8
-        for (uint i = 0; i < amountInfos[tokenId].tokens.length; i++) {
-            parts[index] = string(abi.encodePacked('</text><text x="10" y="', StringsUpgradeable.toString(20 + 10 * index++),'" class="base">'));
-            parts[index++] = getTokenAmount(tokenId, i);
+        for (uint i = 0; i < amountInfos[_tokenId].tokens.length; i++) {
+            parts[index] = string(abi.encodePacked('</text><text x="10" y="', StringsUpgradeable.toString(20 + 10 * index++), '" class="base">'));
+            parts[index++] = getTokenAmount(_tokenId, i);
         }
 
-        parts[index++] = "</text></svg>";
+        parts[index++] = '</text></svg>';
 
         string memory output = string(abi.encodePacked(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7]));
 
-        index = 8;
-        for (uint i = 0; i < amountInfos[tokenId].tokens.length; i++) {
+        index = 8 /* start of tokens */;
+        for (uint i = 0; i < amountInfos[_tokenId].tokens.length; i++) {
             output = string(abi.encodePacked(output, parts[index++], parts[index++]));
         }
         output = string(abi.encodePacked(output, parts[index++]));
+        return output;
+    }
 
-        string memory json = Base64Upgradeable.encode(
-            bytes(
-                string(
-                    abi.encodePacked('{"name": ', '"', getOwnerName(), ' - ', StringsUpgradeable.toString(tokenId),
-                    '", "description": "', getOwnerDescription(), '", "image": "data:image/svg+xml;base64,',
-                    Base64Upgradeable.encode(bytes(output)),
-                    '"}'
-                    )
-                )
+    /// @notice constructs manifest metadata in plaintext for base64 encoding
+    /// @param _tokenId token id
+    /// @return _manifest manifest for base64 encoding
+    function getManifestPlainText(uint _tokenId) public view returns (string memory _manifest) {
+        string memory image = getImagePlainText(_tokenId);
+
+        _manifest = string(
+            abi.encodePacked('{"name": ', '"', getOwnerName(), ' - ', StringsUpgradeable.toString(_tokenId),
+            '", "description": "', getOwnerDescription(), '", "image": "data:image/svg+xml;base64,',
+            Base64Upgradeable.encode(bytes(image)),
+            '"}'
             )
         );
-        output = string(abi.encodePacked("data:application/json;base64,", json));
+    }
 
-        return output;
+    /**
+     * @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
+     */
+    function tokenURI(uint _tokenId) public view virtual override(IERC721AUpgradeable, ERC721AUpgradeable) returns (string memory) {
+        string memory output = getManifestPlainText(_tokenId);
+        string memory json = Base64Upgradeable.encode(bytes(output));
+        return string(abi.encodePacked("data:application/json;base64,", json));
     }
 
     function recoverTokens(IERC20Upgradeable token) external onlyOwner {

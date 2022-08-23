@@ -13,13 +13,13 @@ async function main() {
     } = require(`./networks-${network}.json`);
 
     // const BalanceVaultTemplate = await ethers.getContractFactory('BalanceVault');
-    // const balanceVaultTemplate = await BalanceVaultTemplate.attach("0x0d7b7bb24722908b005a593a5489044901c4e4BF");
-    // // const balanceVaultTemplate = await BalanceVaultTemplate.deploy();
+    // // const balanceVaultTemplate = await BalanceVaultTemplate.attach("0x9Cddcf1a4df75fE9606A22b903Ca345DB325feb1");
+    // const balanceVaultTemplate = await BalanceVaultTemplate.deploy();
     // console.log(`Deployed BalanceVaultTemplate to: ${balanceVaultTemplate.address}`);
     // console.log(`\nVerify:\nnpx hardhat verify --network ${network} ${balanceVaultTemplate.address}`);
 
     const BalanceVaultShareTemplate = await ethers.getContractFactory('BalanceVaultShare');
-    // const balanceVaultShareTemplate = await BalanceVaultShareTemplate.attach("0xeD6fC3D8F9cC550f8369B99927fca525FA164414");
+    // const balanceVaultShareTemplate = await BalanceVaultShareTemplate.attach("0xb1FeF3D6968d289F162Db1D9a80Ac795f3d80195");
     const balanceVaultShareTemplate = await BalanceVaultShareTemplate.deploy();
     console.log(`Deployed BalanceVaultShareTemplate to: ${balanceVaultShareTemplate.address}`);
     console.log(`\nVerify:\nnpx hardhat verify --network ${network} ${balanceVaultShareTemplate.address}`);
@@ -33,8 +33,8 @@ async function main() {
     // // const balanceVaultManager = await BalanceVaultManager.deploy(daoAddress, usdbAddress, feeBorrower, feeLenderUsdb, feeLenderOther);
     // console.log(`Deployed BalanceVaultManager to: ${balanceVaultManager.address}`);
     //
-    // await balanceVaultManager.setVaultTemplate("0x0d7b7bb24722908b005a593a5489044901c4e4BF");
-    // await balanceVaultManager.setNftTemplate("0xeD6fC3D8F9cC550f8369B99927fca525FA164414");
+    // await balanceVaultManager.setVaultTemplate("0x9Cddcf1a4df75fE9606A22b903Ca345DB325feb1");
+    // await balanceVaultManager.setNftTemplate("0xb1FeF3D6968d289F162Db1D9a80Ac795f3d80195");
     // //
     // console.log(`\nVerify:\nnpx hardhat verify --network ${network} `+
     //     `${balanceVaultManager.address} "${daoAddress}" "${usdbAddress}" ${feeBorrower} ${feeLenderUsdb} ${feeLenderOther}`);
