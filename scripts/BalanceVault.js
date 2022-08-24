@@ -19,7 +19,7 @@ async function main() {
     // console.log(`\nVerify:\nnpx hardhat verify --network ${network} ${balanceVaultTemplate.address}`);
 
     const BalanceVaultShareTemplate = await ethers.getContractFactory('BalanceVaultShare');
-    // const balanceVaultShareTemplate = await BalanceVaultShareTemplate.attach("0xb1FeF3D6968d289F162Db1D9a80Ac795f3d80195");
+    // const balanceVaultShareTemplate = await BalanceVaultShareTemplate.attach("0xB7B83B5952bdC8F7E22BC0e74C7670f8A8fA4A7F");
     const balanceVaultShareTemplate = await BalanceVaultShareTemplate.deploy();
     console.log(`Deployed BalanceVaultShareTemplate to: ${balanceVaultShareTemplate.address}`);
     console.log(`\nVerify:\nnpx hardhat verify --network ${network} ${balanceVaultShareTemplate.address}`);
@@ -34,7 +34,7 @@ async function main() {
     // console.log(`Deployed BalanceVaultManager to: ${balanceVaultManager.address}`);
     //
     // await balanceVaultManager.setVaultTemplate("0x9Cddcf1a4df75fE9606A22b903Ca345DB325feb1");
-    // await balanceVaultManager.setNftTemplate("0xb1FeF3D6968d289F162Db1D9a80Ac795f3d80195");
+    // await balanceVaultManager.setNftTemplate("0xB7B83B5952bdC8F7E22BC0e74C7670f8A8fA4A7F");
     // //
     // console.log(`\nVerify:\nnpx hardhat verify --network ${network} `+
     //     `${balanceVaultManager.address} "${daoAddress}" "${usdbAddress}" ${feeBorrower} ${feeLenderUsdb} ${feeLenderOther}`);

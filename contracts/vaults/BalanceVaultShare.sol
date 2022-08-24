@@ -154,32 +154,34 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
     function getImagePlainText(uint _tokenId) public view returns (string memory) {
         uint length = /* 2x end/start text tag plus amount */ 2 * amountInfos[_tokenId].tokens.length + 9 /* 8 in header + 1 in footer */;
 
-        uint index = 0;
         string[] memory parts = new string[](length);
-        parts[index++] = '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 420 420"><style>.base { fill: white; font-family: serif; font-size: 14px; }</style><rect width="100%" height="100%" fill="#1a2c38" /><text x="10" y="20" class="base">';
-        parts[index++] = getOwnerName();
-        parts[index++] = '</text><text x="10" y="40" class="base">';
-        parts[index++] = getRepayment();
-        parts[index++] = '</text><text x="10" y="60" class="base">';
-        parts[index++] = getApr();
-        parts[index++] = '</text><text x="10" y="80" class="base">';
-        parts[index++] = getRoi();
+        parts[0] = '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 420 420"><style>.base { fill: white; font-family: serif; font-size: 14px; }</style><rect width="100%" height="100%" fill="#1a2c38" /><text x="10" y="20" class="base">';
+        parts[1] = getOwnerName();
+        parts[2] = '</text><text x="10" y="40" class="base">';
+        parts[3] = getRepayment();
+        parts[4] = '</text><text x="10" y="60" class="base">';
+        parts[5] = getApr();
+        parts[6] = '</text><text x="10" y="80" class="base">';
+        parts[7] = getRoi();
 
         // starts with 8
+        uint index = 8;
         for (uint i = 0; i < amountInfos[_tokenId].tokens.length; i++) {
-            parts[index] = string(abi.encodePacked('</text><text x="10" y="', StringsUpgradeable.toString(20 + 10 * index++), '" class="base">'));
-            parts[index++] = getTokenAmount(_tokenId, i);
+            parts[index] = string(abi.encodePacked('</text><text x="10" y="', StringsUpgradeable.toString(20 + 10 * index), '" class="base">'));
+            parts[index+1] = getTokenAmount(_tokenId, i);
+            index += 2;
         }
 
-        parts[index++] = '</text></svg>';
+        parts[index] = '</text></svg>';
 
         string memory output = string(abi.encodePacked(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7]));
 
         index = 8 /* start of tokens */;
         for (uint i = 0; i < amountInfos[_tokenId].tokens.length; i++) {
-            output = string(abi.encodePacked(output, parts[index++], parts[index++]));
+            output = string(abi.encodePacked(output, parts[index], parts[index+1]));
+            index += 2;
         }
-        output = string(abi.encodePacked(output, parts[index++]));
+        output = string(abi.encodePacked(output, parts[index]));
         return output;
     }
 
