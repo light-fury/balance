@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.16;
 
-import "erc721a/contracts/ERC721A.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "erc721a-upgradeable/contracts/extensions/ERC721AQueryableUpgradeable.sol";
 
-contract BalancePass is ERC721A, Ownable {
+contract BalancePass is ERC721AQueryableUpgradeable, OwnableUpgradeable {
   /* ================== EVENTS ========================== */
   event NftMinted(address indexed user, uint256 tokenId);
 
@@ -19,16 +19,18 @@ contract BalancePass is ERC721A, Ownable {
 
   /* ================= INITIALIZATION =================== */
   /** 
-     @notice Constructor for the Pass Nonfungible Token
+     @notice one time initialize for the Pass Nonfungible Token
      @param _maxMint  uint256 the max number of mints on this chain
      @param _baseTokenURI string token metadata URI
      */
-
-  constructor(
+  function initialize(
     uint256 _maxMint,
     string memory _baseTokenURI,
     bool _whitelistMintStatus
-  ) ERC721A("Balance Pass", "BALANCE-PASS") {
+  ) public initializerERC721A initializer {
+    __ERC721A_init("Balance Pass", "BALANCE-PASS");
+    __Ownable_init();
+
     maxMint = _maxMint;
     baseTokenURI = _baseTokenURI;
     whitelistMintStatus = _whitelistMintStatus;
@@ -88,7 +90,7 @@ contract BalancePass is ERC721A, Ownable {
     uint256 tokenId = _nextTokenId();
 
     //mint balancepass nft
-    _safeMint(_user, 1);
+    _mint(_user, 1);
 
     emit NftMinted(_user, tokenId);
     return tokenId;
@@ -110,7 +112,7 @@ contract BalancePass is ERC721A, Ownable {
     uint256 tokenId = _nextTokenId();
 
     //mint balancepass nft
-    _safeMint(_user, 1);
+    _mint(_user, 1);
 
     emit NftMinted(_user, tokenId);
     return tokenId;
@@ -130,7 +132,7 @@ contract BalancePass is ERC721A, Ownable {
   function tokenURI(uint256 tokenId)
     public
     view
-    override
+    override(ERC721AUpgradeable, IERC721AUpgradeable)
     returns (string memory)
   {
     string memory tokenURISuffix = string(
