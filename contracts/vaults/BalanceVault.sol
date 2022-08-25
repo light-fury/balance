@@ -282,11 +282,13 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             uint roiSameUnits = roi(amountSameUnits);
 
             toRepaySameUnits += amountSameUnits + roiSameUnits;
+            uint originalFee = roiSameUnits * feeLenderOther / 10000;
             if (tokens[i] == manager.USDB()) {
-                feeSameUnits += roiSameUnits * feeLenderUsdb / 10000;
-            } else {
-                feeSameUnits += roiSameUnits * feeLenderOther / 10000;
+                originalFee = roiSameUnits * feeLenderUsdb / 10000;
             }
+            (uint amount, uint fee) = manager.getDiscountFromFee(msg.sender, originalFee);
+            toRepaySameUnits += amount;
+            feeSameUnits += fee;
         }
 
         // burn user tokens

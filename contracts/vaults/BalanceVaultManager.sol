@@ -12,6 +12,10 @@ import "./BalanceVault.sol";
 import "./BalanceVaultShare.sol";
 import "../utils/ArrayUtils.sol";
 
+interface IBalancePassManager {
+    function getDiscountFromFee(address _user, uint _fee) external view returns (uint, uint);
+}
+
 /// @notice Creates new balance vaults
 contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
@@ -33,6 +37,8 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
     /// vetted tokens
     address[] public allowedTokens;
     mapping(address => bool) public allowedTokensMapping;
+
+    address public balancePassManager;
 
     /// @param _DAO gnosis multisig address
     /// @param _USDB usdb address
@@ -66,6 +72,8 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         address _vaultTemplate,
         address _nftTemplate
     );
+
+    event LogBytes(bytes data);
 
     ///
     /// business logic
@@ -132,6 +140,21 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
         // remember in history
         emit VaultCreated(msg.sender, _vaultAddress, vaultTemplate, nftTemplate);
+    }
+
+    /// @notice get amount and fee part from fee
+    /// @param _user given user
+    /// @param _fee fee to split
+    /// @return amount and fee part from given fee
+    function getDiscountFromFee(address _user, uint _fee) external returns (uint, uint) {
+        if (balancePassManager == address(0)) return (0, _fee);
+
+        try IBalancePassManager(balancePassManager).getDiscountFromFee(_user, _fee) returns (uint _amount, uint _finalFee) {
+            return (_amount, _finalFee);
+        } catch (bytes memory reason) {
+            emit LogBytes(reason);
+        }
+        return (0, _fee);
     }
 
     ///
@@ -203,6 +226,12 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
         allowedTokens = tokens;
         allowedTokensMapping[_token] = false;
+    }
+
+    /// @notice set manager for balance passes
+    /// @param _balancePassManager mgr
+    function setBalancePassManager(address _balancePassManager) external onlyOwner {
+        balancePassManager = _balancePassManager;
     }
 
     function recoverTokens(IERC20 token) external onlyOwner {
