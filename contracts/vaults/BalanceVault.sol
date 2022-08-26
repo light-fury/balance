@@ -286,10 +286,13 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             if (tokens[i] == manager.USDB()) {
                 originalFee = roiSameUnits * feeLenderUsdb / 10000;
             }
+            // this should always return something, at least amount [0, originalFee]
             (uint amount, uint fee) = manager.getDiscountFromFee(msg.sender, originalFee);
             // cannot rug existing vaults by adding more fee than there was before
             // can only add some amount to customers from originalFee
-            require(fee <= originalFee, "FEE_TOO_BIG");
+            if (fee > originalFee) {
+                fee = originalFee;
+            }
             toRepaySameUnits += amount;
             feeSameUnits += fee;
         }
