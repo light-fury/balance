@@ -287,6 +287,9 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 originalFee = roiSameUnits * feeLenderUsdb / 10000;
             }
             (uint amount, uint fee) = manager.getDiscountFromFee(msg.sender, originalFee);
+            // cannot rug existing vaults by adding more fee than there was before
+            // can only add some amount to customers from originalFee
+            require(fee <= originalFee, "FEE_TOO_BIG");
             toRepaySameUnits += amount;
             feeSameUnits += fee;
         }
