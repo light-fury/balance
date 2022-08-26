@@ -164,6 +164,16 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return allowedTokens.values()[0];
     }
 
+    /// @notice get all allowed tokens
+    /// @return all all allowed tokens
+    function getAllowedTokens() external view returns (address[] memory) {
+        return allowedTokens.values();
+    }
+
+    function getOwnerContacts() external view returns (string[] memory) {
+        return ownerContacts;
+    }
+
     /// @notice return all NFTs of given user
     /// @param _owner user
     /// @return all token ids of given user

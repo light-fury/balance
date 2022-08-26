@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -38,7 +39,22 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
     address[] public allowedTokens;
     mapping(address => bool) public allowedTokensMapping;
 
+    /// extension to support configurable discounts
     address public balancePassManager;
+
+    /// repository for all generated vaults
+    address[] generatedVaults;
+
+    struct BalanceVaultDto {
+        string[] ownerInfos;
+        string[] ownerContacts;
+        address ownerWallet;
+        uint fundingAmount;
+        address[] allowedTokens;
+        uint freezeTimestamp;
+        uint repaymentTimestamp;
+        uint apr;
+    }
 
     /// @param _DAO gnosis multisig address
     /// @param _USDB usdb address
@@ -138,6 +154,9 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         // owner of NFT is only for transferring tokens sent to NFT CA by mistake
         share.transferOwnership(msg.sender);
 
+        // persist in paging repository
+        generatedVaults[generatedVaults.length] = _vaultAddress;
+
         // remember in history
         emit VaultCreated(msg.sender, _vaultAddress, vaultTemplate, nftTemplate);
     }
@@ -155,6 +174,46 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
             emit LogBytes(reason);
         }
         return (0, _fee);
+    }
+
+    ///
+    /// paging
+    ///
+
+    /// @notice get generated vaults length for paging
+    /// @return generated vaults length for paging
+    function getGeneratedVaultsLength() external view returns (uint) {
+        return generatedVaults.length;
+    }
+
+    /// @notice skip/limit paging on-chain impl
+    /// @param _skip how many items from beginning to skip
+    /// @param _limit how many items to return in result
+    /// @return page of BalanceVaultDto
+    function getGeneratedVaultsPage(uint _skip, uint _limit) external view returns (BalanceVaultDto[] memory) {
+        if (_skip >= generatedVaults.length) return new BalanceVaultDto[](0);
+
+        uint limit = Math.min(_limit, generatedVaults.length);
+        BalanceVaultDto[] memory page = new BalanceVaultDto[](limit);
+        uint index = 0;
+        for (uint i = _skip; i < limit; i++) {
+            BalanceVault vault = BalanceVault(generatedVaults[i]);
+            string[] memory ownerInfos = new string[](2);
+            ownerInfos[0] = vault.ownerName();
+            ownerInfos[1] = vault.ownerDescription();
+
+            page[index++] = BalanceVaultDto({
+                ownerInfos : ownerInfos,
+                ownerContacts : vault.getOwnerContacts(),
+                ownerWallet: vault.ownerWallet(),
+                fundingAmount: vault.fundingAmount(),
+                allowedTokens: vault.getAllowedTokens(),
+                freezeTimestamp: vault.freezeTimestamp(),
+                repaymentTimestamp: vault.repaymentTimestamp(),
+                apr: vault.apr()
+            });
+        }
+        return page;
     }
 
     ///
