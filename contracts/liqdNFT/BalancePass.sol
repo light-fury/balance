@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.16;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "erc721a-upgradeable/contracts/extensions/ERC721AQueryableUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
-contract BalancePass is ERC721AQueryableUpgradeable, OwnableUpgradeable {
+contract BalancePass is ERC721AQueryable, Ownable {
   /* ================== EVENTS ========================== */
   event NftMinted(address indexed user, uint256 tokenId);
 
@@ -23,14 +23,11 @@ contract BalancePass is ERC721AQueryableUpgradeable, OwnableUpgradeable {
      @param _maxMint  uint256 the max number of mints on this chain
      @param _baseTokenURI string token metadata URI
      */
-  function initialize(
+  constructor(
     uint256 _maxMint,
     string memory _baseTokenURI,
     bool _whitelistMintStatus
-  ) public initializerERC721A initializer {
-    __ERC721A_init("Balance Pass", "BALANCE-PASS");
-    __Ownable_init();
-
+  ) ERC721A("BalancePass", "BALANCE-PASS") {
     maxMint = _maxMint;
     baseTokenURI = _baseTokenURI;
     whitelistMintStatus = _whitelistMintStatus;
@@ -132,7 +129,7 @@ contract BalancePass is ERC721AQueryableUpgradeable, OwnableUpgradeable {
   function tokenURI(uint256 tokenId)
     public
     view
-    override(ERC721AUpgradeable, IERC721AUpgradeable)
+    override(ERC721A, IERC721A)
     returns (string memory)
   {
     string memory tokenURISuffix = string(
