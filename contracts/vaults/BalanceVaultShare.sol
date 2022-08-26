@@ -83,7 +83,7 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
     }
 
     function getOwnerName() internal view returns (string memory) {
-        return string(abi.encodePacked(vault.ownerName(), " (Balance Vault)"));
+        return vault.ownerName();
     }
 
     function getOwnerDescription() internal view returns (string memory) {
@@ -152,36 +152,93 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
     /// @param _tokenId token id
     /// @return image for base64 encoding into manifest
     function getImagePlainText(uint _tokenId) public view returns (string memory) {
-        uint length = /* 2x end/start text tag plus amount */ 2 * amountInfos[_tokenId].tokens.length + 9 /* 8 in header + 1 in footer */;
+        uint tokenLength = amountInfos[_tokenId].tokens.length;
+        uint length = /* rect+text for each token amount */ 2 * tokenLength + 12 /* 4 + 4 + 4 */;
 
+        uint index = 0;
         string[] memory parts = new string[](length);
-        parts[0] = '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 420 420"><style>.base { fill: white; font-family: serif; font-size: 14px; }</style><rect width="100%" height="100%" fill="#1a2c38" /><text x="10" y="20" class="base">';
-        parts[1] = getOwnerName();
-        parts[2] = '</text><text x="10" y="40" class="base">';
-        parts[3] = getRepayment();
-        parts[4] = '</text><text x="10" y="60" class="base">';
-        parts[5] = getApr();
-        parts[6] = '</text><text x="10" y="80" class="base">';
-        parts[7] = getRoi();
+        parts[index++] = '<?xml version="1.0" encoding="UTF-8"?>';
+        parts[index++] = '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1359" viewBox="0 0 1080 1359">'
+            '<style>.b,.h{fill:#fff;font-family:"Sora-Regular, Sora"}.h{font-size:83px}.b{font-size:34px;background-color:#000;padding:20px}</style>';
+        parts[index++] = '<defs>'
+            '<clipPath id="clip-path">'
+                '<rect id="Rectangle_994" width="1080" height="1359" rx="34" stroke="#707070" stroke-width="1"/>'
+            '</clipPath>'
+            '<radialGradient id="radial-gradient" cx="0.5" cy="0.5" r="0.5" gradientUnits="objectBoundingBox">'
+                '<stop offset="0" stop-color="#358077"/>'
+                '<stop offset="1" stop-opacity="0"/>'
+            '</radialGradient>'
+            '<radialGradient id="radial-gradient-2" cx="0.5" cy="0.5" r="0.5" gradientUnits="objectBoundingBox">'
+                '<stop offset="0" stop-color="#393493"/>'
+                '<stop offset="1" stop-color="#1d1a4a" stop-opacity="0"/>'
+            '</radialGradient>'
+            '<linearGradient id="linear-gradient" y1="0.5" x2="1" y2="0.5" gradientUnits="objectBoundingBox">'
+                '<stop offset="0" stop-color="#fff"/>'
+                '<stop offset="1" stop-color="gray"/>'
+            '</linearGradient>'
+        '</defs>';
+        parts[index++] = '<g id="Rectangle_993" stroke="#707070" stroke-width="1">'
+            '<rect width="1080" height="1359" rx="34" stroke="none"/>'
+            '<rect x="0.5" y="0.5" width="1079" height="1358" rx="33.5" fill="none"/>'
+        '</g>'
+        '<g id="Mask_Group_1" clip-path="url(#clip-path)">'
+            '<g id="Group_12660" transform="translate(-1025 -1533.908)">'
+                '<ellipse id="Ellipse_975" cx="1042" cy="1311.5" rx="1042" ry="1311.5" transform="translate(0 1963.908)" fill="url(#radial-gradient)"/>'
+                '<ellipse id="Ellipse_976" cx="986" cy="1241" rx="986" ry="1241" transform="translate(1025 -0.092)" fill="url(#radial-gradient-2)"/>'
+            '</g>'
+        '</g>'
+        '<g id="Rectangle_992" transform="translate(53 53)" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1">'
+            '<rect width="975" height="1254" rx="23" stroke="none"/>'
+            '<rect x="0.5" y="0.5" width="974" height="1253" rx="22.5" fill="none"/>'
+        '</g>'
+        '<g id="Group_12556" transform="translate(-347.391 -267.524)">'
+            '<g id="Group_12539" transform="translate(447.391 395.883)">'
+                '<g id="Group_12544" transform="translate(0 0)">'
+                    '<path id="Path_3381" d="M484.882-1143.461a51.172,51.172,0,0,1-39.349-39.349,8.723,8.723,0,0,1,8.509-10.564h0a8.655,8.655,0,0,1,8.5,6.835,33.7,33.7,0,0,0,26.067,26.068,8.655,8.655,0,0,1,6.835,8.5h0A8.724,8.724,0,0,1,484.882-1143.461Z" transform="translate(-412.268 1193.987)" fill="url(#linear-gradient)"/>'
+                    '<path id="Path_3382" d="M379.928-1118.648a51.172,51.172,0,0,1,39.349,39.349,8.723,8.723,0,0,1-8.509,10.564h0a8.655,8.655,0,0,1-8.5-6.835,33.7,33.7,0,0,0-26.067-26.067,8.655,8.655,0,0,1-6.835-8.5h0A8.723,8.723,0,0,1,379.928-1118.648Z" transform="translate(-369.364 1151.897)" fill="url(#linear-gradient)"/>'
+                    '<path id="Path_3383" d="M379.928-1144.869a51.171,51.171,0,0,0,39.349-39.349,8.723,8.723,0,0,0-8.509-10.563h0a8.655,8.655,0,0,0-8.5,6.835,33.7,33.7,0,0,1-26.067,26.067,8.654,8.654,0,0,0-6.835,8.5h0A8.723,8.723,0,0,0,379.928-1144.869Z" transform="translate(-369.364 1194.781)" fill="#fff"/>'
+                    '<path id="Path_3384" d="M484.882-1118.648a51.172,51.172,0,0,0-39.349,39.349,8.723,8.723,0,0,0,8.509,10.564h0a8.655,8.655,0,0,0,8.5-6.835,33.7,33.7,0,0,1,26.067-26.067,8.656,8.656,0,0,0,6.835-8.5h0A8.723,8.723,0,0,0,484.882-1118.648Z" transform="translate(-412.268 1151.897)" fill="#fff"/>'
+                '</g>'
+            '</g>'
+            '<text id="balance" transform="translate(645.958 450.121)" fill="#fff" stroke="rgba(0,0,0,0)" stroke-width="1" font-size="41" font-family="Sora-Regular, Sora" letter-spacing="0.05em"><tspan x="-87.801" y="0">balance</tspan></text>'
+        '</g>';
 
-        // starts with 8
-        uint index = 8;
-        for (uint i = 0; i < amountInfos[_tokenId].tokens.length; i++) {
-            parts[index] = string(abi.encodePacked('</text><text x="10" y="', StringsUpgradeable.toString(20 + 10 * index), '" class="base">'));
-            parts[index+1] = getTokenAmount(_tokenId, i);
-            index += 2;
+        uint yStart = 763;
+        for (uint i = 0; i < tokenLength; i++) {
+            parts[index++] = string(abi.encodePacked('<rect width="585" height="104" rx="23" transform="translate(100 ', StringsUpgradeable.toString(yStart - i * 132), ')" fill="rgba(255,255,255,0.11)"/>'));
         }
 
-        parts[index] = '</text></svg>';
+        parts[index++] = '<rect width="585" height="104" rx="23" transform="translate(100 895)" fill="rgba(255,255,255,0.11)"/>';
+        parts[index++] = '<rect width="211" height="104" rx="23" transform="translate(100 1025)" fill="rgba(255,255,255,0.11)"/>';
+        parts[index++] = '<rect width="240" height="104" rx="23" transform="translate(100 1155)" fill="rgba(255,255,255,0.11)"/>';
 
-        string memory output = string(abi.encodePacked(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7]));
+        parts[index++] = string(abi.encodePacked('<text transform="translate(100 366)" class="h">', getOwnerName(), '</text>'));
 
-        index = 8 /* start of tokens */;
-        for (uint i = 0; i < amountInfos[_tokenId].tokens.length; i++) {
-            output = string(abi.encodePacked(output, parts[index], parts[index+1]));
-            index += 2;
+        yStart = 827;
+        for (uint i = 0; i < tokenLength; i++) {
+            parts[index++] = string(abi.encodePacked('<text transform="translate(134 ', StringsUpgradeable.toString(yStart - i * 129), ')" class="b">', getTokenAmount(_tokenId, i), '</text>'));
         }
-        output = string(abi.encodePacked(output, parts[index]));
+
+        parts[index++] = string(abi.encodePacked('<text transform="translate(134 956)" class="b">', getRepayment(), '</text>'));
+        parts[index++] = string(abi.encodePacked('<text transform="translate(134 1085)" class="b">', getApr(), '</text>'));
+        parts[index++] = string(abi.encodePacked('<text transform="translate(134 1219)" class="b">', getRoi(), '</text>'));
+        parts[index] = '</svg>';
+
+        // <xml> to <image>
+        string memory output = string(abi.encodePacked(parts[0], parts[1], parts[2], parts[3]));
+        // <rect> for tokens
+        for (uint i = 0; i < tokenLength; i++) {
+            output = string(abi.encodePacked(output, parts[4 + i]));
+        }
+        // <rect> for others + <text> for heading
+        output = string(abi.encodePacked(output, parts[4 + tokenLength], parts[5 + tokenLength], parts[6 + tokenLength], parts[7 + tokenLength]));
+        // <text> for tokens
+        for (uint i = 0; i < tokenLength; i++) {
+            output = string(abi.encodePacked(output, parts[8 + tokenLength + i]));
+        }
+        // <text> for others + </svg>
+        output = string(abi.encodePacked(output, parts[8 + 2 * tokenLength], parts[9 + 2 * tokenLength], parts[10 + 2 * tokenLength], parts[11 + 2 * tokenLength]));
+
         return output;
     }
 
@@ -192,7 +249,7 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         string memory image = getImagePlainText(_tokenId);
 
         _manifest = string(
-            abi.encodePacked('{"name": ', '"', getOwnerName(), ' - ', StringsUpgradeable.toString(_tokenId),
+            abi.encodePacked('{"name": ', '"', getOwnerName(), ' (Balance Vault) - ', StringsUpgradeable.toString(_tokenId),
             '", "description": "', getOwnerDescription(), '", "image": "data:image/svg+xml;base64,',
             Base64Upgradeable.encode(bytes(image)),
             '"}'
