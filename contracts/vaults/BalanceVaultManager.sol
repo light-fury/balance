@@ -47,10 +47,9 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
     mapping(address => bool) generatedVaultsBlacklist;
 
     struct BalanceVaultDto {
-        address contractAddress;
+        address vaultAddress;
         uint index;
-        bool blacklisted;
-        address nft;
+        address nftAddress;
 
         string[] ownerInfos;
         string[] ownerContacts;
@@ -62,6 +61,16 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         uint repaymentTimestamp;
         uint apr;
         bool shouldBeFrozen;
+    }
+
+    struct BalanceVaultPositionDto {
+        address vaultAddress;
+        uint index;
+        address nftAddress;
+
+        address user;
+        uint[] amounts;
+        address[] tokens;
     }
 
     /// @param _DAO gnosis multisig address
@@ -196,9 +205,9 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
     /// @notice skip/limit paging on-chain impl
     /// @param _skip how many items from beginning to skip
-    /// @param _limit how many items to return in result
+    /// @param _limit how many items to return in result which are not blacklisted
     /// @return page of BalanceVaultDto
-    function getGeneratedVaultsPage(uint _skip, uint _limit) public view returns (BalanceVaultDto[] memory) {
+    function getGeneratedVaultsPage(uint _skip, uint _limit) external view returns (BalanceVaultDto[] memory) {
         if (_skip >= generatedVaults.length) return new BalanceVaultDto[](0);
 
         uint limit = Math.min(_limit, generatedVaults.length);
@@ -206,15 +215,17 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         uint index = 0;
         for (uint i = _skip; i < limit; i++) {
             BalanceVault vault = BalanceVault(generatedVaults[i]);
+            // do not send blacklisted vaults to the frontend
+            if (generatedVaultsBlacklist[address (vault)]) continue;
+
             string[] memory ownerInfos = new string[](2);
             ownerInfos[0] = vault.ownerName();
             ownerInfos[1] = vault.ownerDescription();
 
             page[index++] = BalanceVaultDto({
-                contractAddress: address (vault),
+                vaultAddress: address (vault),
                 index: i,
-                blacklisted: generatedVaultsBlacklist[address (vault)],
-                nft: address(vault.nft()),
+                nftAddress: address(vault.nft()),
 
                 ownerInfos : ownerInfos,
                 ownerContacts : vault.getOwnerContacts(),
@@ -226,6 +237,39 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
                 repaymentTimestamp: vault.repaymentTimestamp(),
                 apr: vault.apr(),
                 shouldBeFrozen: vault.shouldBeFrozen()
+            });
+        }
+        return page;
+    }
+
+    /// @notice skip/limit paging on-chain impl
+    /// @param _user user address
+    /// @param _skip how many items from beginning to skip
+    /// @param _limit how many items to return in result
+    /// @return page of BalanceVaultPositionDto
+    function getPositionsPage(address _user, uint _skip, uint _limit) external view returns (BalanceVaultPositionDto[] memory) {
+        if (_skip >= generatedVaults.length) return new BalanceVaultPositionDto[](0);
+
+        uint limit = Math.min(_limit, generatedVaults.length);
+        BalanceVaultPositionDto[] memory page = new BalanceVaultPositionDto[](limit);
+        uint index = 0;
+        for (uint i = _skip; i < limit; i++) {
+            BalanceVault vault = BalanceVault(generatedVaults[i]);
+            // do not send blacklisted vaults to the frontend
+            if (generatedVaultsBlacklist[address (vault)]) continue;
+
+            (uint[] memory _amounts, address[] memory _tokens) = vault.balanceOf(_user);
+            // do not send empty positions to the frontend
+            if (_amounts.length == 0) continue;
+
+            page[index++] = BalanceVaultPositionDto({
+                vaultAddress: address (vault),
+                index: i,
+                nftAddress: address(vault.nft()),
+
+                user: _user,
+                amounts: _amounts,
+                tokens: _tokens
             });
         }
         return page;
