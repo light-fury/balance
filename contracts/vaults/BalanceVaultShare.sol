@@ -159,7 +159,10 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         string[] memory parts = new string[](length);
         parts[index++] = '<?xml version="1.0" encoding="UTF-8"?>';
         parts[index++] = '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1359" viewBox="0 0 1080 1359">'
-            '<style>.b,.h{fill:#fff;font-family:"Sora-Regular, Sora"}.h{font-size:83px}.b{font-size:34px;background-color:#000;padding:20px}</style>';
+            '<style>'
+                "@import url('https://fonts.googleapis.com/css2?family=Sora:wght@100;300;400;700;800')"
+                '.b,.h{fill:#fff;font-family:"Sora"}.h{font-size:83px}.b{font-size:34px;background-color:#000;padding:20px}'
+            '</style>';
         parts[index++] = '<defs>'
             '<clipPath id="clip-path">'
                 '<rect id="Rectangle_994" width="1080" height="1359" rx="34" stroke="#707070" stroke-width="1"/>'
@@ -200,7 +203,7 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
                     '<path id="Path_3384" d="M484.882-1118.648a51.172,51.172,0,0,0-39.349,39.349,8.723,8.723,0,0,0,8.509,10.564h0a8.655,8.655,0,0,0,8.5-6.835,33.7,33.7,0,0,1,26.067-26.067,8.656,8.656,0,0,0,6.835-8.5h0A8.723,8.723,0,0,0,484.882-1118.648Z" transform="translate(-412.268 1151.897)" fill="#fff"/>'
                 '</g>'
             '</g>'
-            '<text id="balance" transform="translate(645.958 450.121)" fill="#fff" stroke="rgba(0,0,0,0)" stroke-width="1" font-size="41" font-family="Sora-Regular, Sora" letter-spacing="0.05em"><tspan x="-87.801" y="0">balance</tspan></text>'
+            '<text id="balance" transform="translate(645.958 450.121)" fill="#fff" stroke="rgba(0,0,0,0)" stroke-width="1" font-size="41" style="font-family:\'Sora\';" letter-spacing="0.05em"><tspan x="-87.801" y="0">balance</tspan></text>'
         '</g>';
 
         uint yStart = 763;
@@ -212,16 +215,16 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         parts[index++] = '<rect width="211" height="104" rx="23" transform="translate(100 1025)" fill="rgba(255,255,255,0.11)"/>';
         parts[index++] = '<rect width="240" height="104" rx="23" transform="translate(100 1155)" fill="rgba(255,255,255,0.11)"/>';
 
-        parts[index++] = string(abi.encodePacked('<text transform="translate(100 366)" class="h">', getOwnerName(), '</text>'));
+        parts[index++] = string(abi.encodePacked('<text transform="translate(100 366)" class="h" style="font-family:\'Sora\';">', getOwnerName(), '</text>'));
 
         yStart = 827;
         for (uint i = 0; i < tokenLength; i++) {
-            parts[index++] = string(abi.encodePacked('<text transform="translate(134 ', StringsUpgradeable.toString(yStart - i * 129), ')" class="b">', getTokenAmount(_tokenId, i), '</text>'));
+            parts[index++] = string(abi.encodePacked('<text transform="translate(134 ', StringsUpgradeable.toString(yStart - i * 129), ')" class="b" style="font-family:\'Sora\';">', getTokenAmount(_tokenId, i), '</text>'));
         }
 
-        parts[index++] = string(abi.encodePacked('<text transform="translate(134 956)" class="b">', getRepayment(), '</text>'));
-        parts[index++] = string(abi.encodePacked('<text transform="translate(134 1085)" class="b">', getApr(), '</text>'));
-        parts[index++] = string(abi.encodePacked('<text transform="translate(134 1219)" class="b">', getRoi(), '</text>'));
+        parts[index++] = string(abi.encodePacked('<text transform="translate(134 956)" class="b" style="font-family:\'Sora\';">', getRepayment(), '</text>'));
+        parts[index++] = string(abi.encodePacked('<text transform="translate(134 1085)" class="b" style="font-family:\'Sora\';">', getApr(), '</text>'));
+        parts[index++] = string(abi.encodePacked('<text transform="translate(134 1219)" class="b" style="font-family:\'Sora\';">', getRoi(), '</text>'));
         parts[index] = '</svg>';
 
         // <xml> to <image>
