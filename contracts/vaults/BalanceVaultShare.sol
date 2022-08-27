@@ -160,8 +160,8 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
         parts[index++] = '<?xml version="1.0" encoding="UTF-8"?>';
         parts[index++] = '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1359" viewBox="0 0 1080 1359">'
             '<style>'
-                "@import url('https://fonts.googleapis.com/css2?family=Sora:wght@100;300;400;700;800')"
-                '.b,.h{fill:#fff;font-family:"Sora"}.h{font-size:83px}.b{font-size:34px;background-color:#000;padding:20px}'
+                "@import url('https://fonts.googleapis.com/css2?family=Sora:wght@100;300;400;700;800');"
+                ' .b,.h{fill:#fff;font-family:"Sora"}.h{font-size:83px}.b{font-size:34px;background-color:#000;padding:20px}'
             '</style>';
         parts[index++] = '<defs>'
             '<clipPath id="clip-path">'

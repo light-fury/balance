@@ -44,16 +44,24 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
     /// repository for all generated vaults
     address[] generatedVaults;
+    mapping(address => bool) generatedVaultsBlacklist;
 
     struct BalanceVaultDto {
+        address contractAddress;
+        uint index;
+        bool blacklisted;
+        address nft;
+
         string[] ownerInfos;
         string[] ownerContacts;
         address ownerWallet;
         uint fundingAmount;
+        uint fundraised;
         address[] allowedTokens;
         uint freezeTimestamp;
         uint repaymentTimestamp;
         uint apr;
+        bool shouldBeFrozen;
     }
 
     /// @param _DAO gnosis multisig address
@@ -155,7 +163,7 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         share.transferOwnership(msg.sender);
 
         // persist in paging repository
-        generatedVaults[generatedVaults.length] = _vaultAddress;
+        generatedVaults.push(_vaultAddress);
 
         // remember in history
         emit VaultCreated(msg.sender, _vaultAddress, vaultTemplate, nftTemplate);
@@ -190,7 +198,7 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
     /// @param _skip how many items from beginning to skip
     /// @param _limit how many items to return in result
     /// @return page of BalanceVaultDto
-    function getGeneratedVaultsPage(uint _skip, uint _limit) external view returns (BalanceVaultDto[] memory) {
+    function getGeneratedVaultsPage(uint _skip, uint _limit) public view returns (BalanceVaultDto[] memory) {
         if (_skip >= generatedVaults.length) return new BalanceVaultDto[](0);
 
         uint limit = Math.min(_limit, generatedVaults.length);
@@ -203,17 +211,34 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
             ownerInfos[1] = vault.ownerDescription();
 
             page[index++] = BalanceVaultDto({
+                contractAddress: address (vault),
+                index: i,
+                blacklisted: generatedVaultsBlacklist[address (vault)],
+                nft: address(vault.nft()),
+
                 ownerInfos : ownerInfos,
                 ownerContacts : vault.getOwnerContacts(),
                 ownerWallet: vault.ownerWallet(),
                 fundingAmount: vault.fundingAmount(),
+                fundraised: vault.fundraised(),
                 allowedTokens: vault.getAllowedTokens(),
                 freezeTimestamp: vault.freezeTimestamp(),
                 repaymentTimestamp: vault.repaymentTimestamp(),
-                apr: vault.apr()
+                apr: vault.apr(),
+                shouldBeFrozen: vault.shouldBeFrozen()
             });
         }
         return page;
+    }
+
+    function modifyGeneratedVaultBlacklist(address _contractAddress, bool _add) external onlyOwner {
+        if (_add) {
+            require(!generatedVaultsBlacklist[_contractAddress], "ALREADY_IN_BLACKLIST");
+            generatedVaultsBlacklist[_contractAddress] = true;
+        } else {
+            require(generatedVaultsBlacklist[_contractAddress], "NOT_IN_BLACKLIST");
+            delete generatedVaultsBlacklist[_contractAddress];
+        }
     }
 
     ///
