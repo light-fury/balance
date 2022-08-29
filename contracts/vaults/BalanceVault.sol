@@ -199,8 +199,8 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             return (_amounts, _tokens);
         }
 
-        uint[] memory tmpAmounts = new uint[](0);
-        address[] memory tmpTokens = new address[](0);
+        uint[] memory tmpAmounts;
+        address[] memory tmpTokens;
         for (uint i = 0; i < _tokenIds.length; i++) {
             (uint[] memory amounts, address[] memory tokens) = nft.getAmountInfos(_tokenIds[i]);
 
@@ -415,8 +415,6 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         string[] memory _ownerContacts
     ) external onlyOwner {
         require(!shouldBeFrozen(), "SHOULDNT_BE_FROZEN");
-        require(!frozen, "ALREADY_FROZEN");
-        require(!redeemPrepared, "REDEEM_PREPARED");
 
         ownerName = _ownerName;
         ownerDescription = _ownerDescription;
