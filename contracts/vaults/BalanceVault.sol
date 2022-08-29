@@ -488,7 +488,13 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         IERC20Upgradeable(repayToken()).safeTransferFrom(msg.sender, address(this), toRepayAmount);
     }
 
+    /// @notice can recover tokens sent by mistake to this CA, but cannot recover allowed tokens, those will be sent to vault owner on freeze
+    /// @param token CA
     function recoverTokens(IERC20Upgradeable token) external onlyOwner {
+        address[] memory allowed = allowedTokens.values();
+        for (uint i = 0; i < allowed.length; i++) {
+            require(address(token) != allowed[i], "CANNOT_RECOVER_ALLOWED_TOKEN");
+        }
         token.safeTransfer(owner(), token.balanceOf(address(this)));
     }
 
