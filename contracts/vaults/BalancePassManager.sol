@@ -28,12 +28,6 @@ interface BalancePassHolderStrategy {
     function getTokenType(address _user) external view returns (string memory);
 }
 
-library Hash {
-    function hash(string calldata _string) external pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_string));
-    }
-}
-
 contract OnChainBalancePassHolderStrategy is BalancePassHolderStrategy {
 
     BalancePassNft public balancePassNft;
@@ -55,13 +49,13 @@ contract OnChainBalancePassHolderStrategy is BalancePassHolderStrategy {
         bool platinumFound = false;
         for (uint i = 0; i < tokens.length; i++) {
             string memory result = balancePassNft.getTokenType(tokens[i]);
-            if (Hash.hash(result) == Hash.hash("Gold")) {
+            if (hash(result) == hash("Gold")) {
                 goldFound = true;
                 // we can skip as we found the best
                 break;
             }
-            else if (Hash.hash(result) == Hash.hash("Silver")) silverFound = true;
-            else if (Hash.hash(result) == Hash.hash("Platinum")) platinumFound = true;
+            else if (hash(result) == hash("Silver")) silverFound = true;
+            else if (hash(result) == hash("Platinum")) platinumFound = true;
             // else undefined none of them found
         }
 
@@ -71,20 +65,25 @@ contract OnChainBalancePassHolderStrategy is BalancePassHolderStrategy {
         return "Undefined";
     }
 
+    function hash(string memory _string) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_string));
+    }
+
 }
 
-contract OffChainBalancePassHolderStrategy is BalancePassHolderStrategy {
+contract OffChainBalancePassHolderStrategy is BalancePassHolderStrategy, Ownable {
 
+    address[] public users;
     /// mapping for user to list of tokenIds
-    mapping(address => address[]) tokenIdSnapshot;
+    mapping(address => uint[]) public tokenIdSnapshot;
     /// unmodifiable mapping between tokenId and type
-    mapping(address => string) tokenTypeSnapshot;
+    mapping(uint => string) public tokenTypeSnapshot;
 
     /// @notice return balance pass holder class
     /// @param _user user
     /// @return balance pass holder class, 'Undefined', 'Platinum', 'Silver', 'Gold'
     function getTokenType(address _user) external view returns (string memory) {
-        address[] memory tokens = tokenIdSnapshot[_user];
+        uint[] memory tokens = tokenIdSnapshot[_user];
         if (tokens.length == 0) return "Undefined";
 
         bool goldFound = false;
@@ -92,13 +91,13 @@ contract OffChainBalancePassHolderStrategy is BalancePassHolderStrategy {
         bool platinumFound = false;
         for (uint i = 0; i < tokens.length; i++) {
             string memory result = tokenTypeSnapshot[tokens[i]];
-            if (Hash.hash(result) == Hash.hash("Gold")) {
+            if (hash(result) == hash("Gold")) {
                 goldFound = true;
                 // we can skip as we found the best
                 break;
             }
-            else if (Hash.hash(result) == Hash.hash("Silver")) silverFound = true;
-            else if (Hash.hash(result) == Hash.hash("Platinum")) platinumFound = true;
+            else if (hash(result) == hash("Silver")) silverFound = true;
+            else if (hash(result) == hash("Platinum")) platinumFound = true;
             // else undefined none of them found
         }
 
@@ -108,7 +107,36 @@ contract OffChainBalancePassHolderStrategy is BalancePassHolderStrategy {
         return "Undefined";
     }
 
-    // FIXME add mappings
+    function hash(string memory _string) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_string));
+    }
+
+    ///
+    /// management
+    ///
+
+    function clearMappings() external onlyOwner {
+        for (uint i = users.length; i >= 0; i--) {
+            address user = users[i];
+            uint[] memory tokens = tokenIdSnapshot[user];
+            for (uint j = 0; j < tokens.length; j++) {
+                delete tokenTypeSnapshot[tokens[j]];
+            }
+
+            delete tokenIdSnapshot[user];
+            users.pop();
+        }
+    }
+
+    function addMapping(address _user, uint[] calldata _tokenIds, string[] calldata _tokenTypes) external onlyOwner {
+        require(_tokenIds.length == _tokenTypes.length, "ARRAY_LENGTH_NOT_SAME");
+
+        users.push(_user);
+        tokenIdSnapshot[_user] = _tokenIds;
+        for (uint i = 0; i < _tokenTypes.length; i++) {
+            tokenTypeSnapshot[_tokenIds[i]] = _tokenTypes[i];
+        }
+    }
 
 }
 
@@ -138,11 +166,11 @@ contract BalancePassManager is Ownable {
 
         // Undefined
         uint amount = 0;
-        if (Hash.hash(tokenType) == Hash.hash("Gold")) {
+        if (hash(tokenType) == hash("Gold")) {
             amount = _fee * discountGold / 10000;
-        } else if (Hash.hash(tokenType) == Hash.hash("Silver")) {
+        } else if (hash(tokenType) == hash("Silver")) {
             amount = _fee * discountSilver / 10000;
-        } else if (Hash.hash(tokenType) == Hash.hash("Platinum")) {
+        } else if (hash(tokenType) == hash("Platinum")) {
             amount = _fee * discountPlatinum / 10000;
         }
 
@@ -150,6 +178,9 @@ contract BalancePassManager is Ownable {
         return (amount, realFee);
     }
 
+    function hash(string memory _string) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_string));
+    }
 
     ///
     /// management
