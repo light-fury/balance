@@ -69,8 +69,8 @@ contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
 
         uint tokenId = _nextTokenId();
         amountInfos[tokenId] = AmountInfo({
-        amounts : _amounts,
-        tokens : _tokens
+            amounts : _amounts,
+            tokens : _tokens
         });
 
         _mint(_user, 1);

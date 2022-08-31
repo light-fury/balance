@@ -199,8 +199,8 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             return (_amounts, _tokens);
         }
 
-        uint[] memory tmpAmounts = new uint[](0);
-        address[] memory tmpTokens = new address[](0);
+        uint[] memory tmpAmounts;
+        address[] memory tmpTokens;
         for (uint i = 0; i < _tokenIds.length; i++) {
             (uint[] memory amounts, address[] memory tokens) = nft.getAmountInfos(_tokenIds[i]);
 
@@ -253,7 +253,9 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice premature withdraw all your funds from vault, burn all your nfts without get any APR
     function withdraw() external nonReentrant {
-        require(!shouldBeFrozen(), "SHOULD_BE_FROZEN");
+        // in case the vault owner doesn't freeze the vault, if repaymentTimestamp < block.timestamp, allow withdrawing funds
+        // so that the funds aren't stucked forever
+        require(!shouldBeFrozen() || (!frozen && repaymentTimestamp < block.timestamp), "SHOULD_BE_FROZEN");
 
         // collect previous deposits
         uint[] memory tokenIds = tokensOfOwner(msg.sender);
@@ -416,7 +418,6 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ) external onlyOwner {
         require(!shouldBeFrozen(), "SHOULDNT_BE_FROZEN");
         require(!frozen, "ALREADY_FROZEN");
-        require(!redeemPrepared, "REDEEM_PREPARED");
 
         ownerName = _ownerName;
         ownerDescription = _ownerDescription;
