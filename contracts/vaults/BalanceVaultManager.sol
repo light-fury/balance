@@ -3,6 +3,7 @@
 pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
@@ -18,9 +19,11 @@ interface IBalancePassManager {
 }
 
 /// @notice Creates new balance vaults
-contract BalanceVaultManager is Ownable, ReentrancyGuard {
+contract BalanceVaultManager is Ownable, AccessControl, ReentrancyGuard {
 
     using SafeERC20 for IERC20;
+
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     address public immutable DAO;
     address public immutable USDB;
@@ -44,7 +47,7 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
     /// repository for all generated vaults
     address[] generatedVaults;
-    mapping(address => bool) generatedVaultsBlacklist;
+    mapping(address => bool) generatedVaultsWhitelist;
 
     struct BalanceVaultDto {
         address vaultAddress;
@@ -88,6 +91,9 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         feeLenderOther = _feeLenderOther;
 
         setAllowedToken(_USDB);
+
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(MANAGER_ROLE, _msgSender());
     }
 
     ///
@@ -215,8 +221,8 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         uint index = 0;
         for (uint i = _skip; i < limit; i++) {
             BalanceVault vault = BalanceVault(generatedVaults[i]);
-            // do not send blacklisted vaults to the frontend
-            if (generatedVaultsBlacklist[address (vault)]) continue;
+            // do not send not vetted vaults to the frontend
+            if (!generatedVaultsWhitelist[address (vault)]) continue;
 
             string[] memory ownerInfos = new string[](2);
             ownerInfos[0] = vault.ownerName();
@@ -255,8 +261,8 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         uint index = 0;
         for (uint i = _skip; i < limit; i++) {
             BalanceVault vault = BalanceVault(generatedVaults[i]);
-            // do not send blacklisted vaults to the frontend
-            if (generatedVaultsBlacklist[address (vault)]) continue;
+            // do not send not vetted vaults to the frontend
+            if (!generatedVaultsWhitelist[address (vault)]) continue;
 
             (uint[] memory _amounts, address[] memory _tokens) = vault.balanceOf(_user);
             // do not send empty positions to the frontend
@@ -275,13 +281,18 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
         return page;
     }
 
-    function modifyGeneratedVaultBlacklist(address _contractAddress, bool _add) external onlyOwner {
+    /// @notice when created vault is vetted, operator will add it into the currated list
+    /// @param _contractAddress vault CA
+    /// @param _add true if addition
+    function modifyGeneratedVaultWhitelist(address _contractAddress, bool _add) external {
+        require(hasRole(MANAGER_ROLE, _msgSender()), "MANAGER_ROLE_MISSING");
+
         if (_add) {
-            require(!generatedVaultsBlacklist[_contractAddress], "ALREADY_IN_BLACKLIST");
-            generatedVaultsBlacklist[_contractAddress] = true;
+            require(!generatedVaultsWhitelist[_contractAddress], "ALREADY_IN_WHITELIST");
+            generatedVaultsWhitelist[_contractAddress] = true;
         } else {
-            require(generatedVaultsBlacklist[_contractAddress], "NOT_IN_BLACKLIST");
-            delete generatedVaultsBlacklist[_contractAddress];
+            require(generatedVaultsWhitelist[_contractAddress], "NOT_IN_WHITELIST");
+            delete generatedVaultsWhitelist[_contractAddress];
         }
     }
 
@@ -368,6 +379,18 @@ contract BalanceVaultManager is Ownable, ReentrancyGuard {
 
     function recoverEth() external onlyOwner {
         payable(owner()).transfer(address(this).balance);
+    }
+
+    /// @notice grants manager role to given _account
+    /// @param _account manager contract
+    function grantRoleManager(address _account) external {
+        grantRole(MANAGER_ROLE, _account);
+    }
+
+    /// @notice revoke manager role to given _account
+    /// @param _account manager contract
+    function revokeRoleManager(address _account) external {
+        revokeRole(MANAGER_ROLE, _account);
     }
 
 }
