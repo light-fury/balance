@@ -5,188 +5,188 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
 contract BalancePass is ERC721AQueryable, Ownable {
-  /* ================== EVENTS ========================== */
-  event NftMinted(address indexed user, uint256 tokenId);
+    /* ================== EVENTS ========================== */
+    event NftMinted(address indexed user, uint256 tokenId);
 
-  /* ================== STATE VARIABLES ================== */
+    /* ================== STATE VARIABLES ================== */
 
-  string public baseTokenURI;
-  uint256 maxMint;
+    string public baseTokenURI;
+    uint256 maxMint;
 
-  bool public whitelistMintStatus;
+    bool public whitelistMintStatus;
 
-  mapping(uint8 => uint256[][]) public tokenTypeArray;
+    mapping(uint8 => uint256[][]) public tokenTypeArray;
 
-  /* ================= INITIALIZATION =================== */
-  /** 
-     @notice one time initialize for the Pass Nonfungible Token
+    /* ================= INITIALIZATION =================== */
+    /**
+@notice one time initialize for the Pass Nonfungible Token
      @param _maxMint  uint256 the max number of mints on this chain
      @param _baseTokenURI string token metadata URI
      */
-  constructor(
-    uint256 _maxMint,
-    string memory _baseTokenURI,
-    bool _whitelistMintStatus
-  ) ERC721A("BalancePass", "BALANCE-PASS") {
-    maxMint = _maxMint;
-    baseTokenURI = _baseTokenURI;
-    whitelistMintStatus = _whitelistMintStatus;
-  }
+    constructor(
+        uint256 _maxMint,
+        string memory _baseTokenURI,
+        bool _whitelistMintStatus
+    ) ERC721A("BalancePass", "BALANCE-PASS") {
+        maxMint = _maxMint;
+        baseTokenURI = _baseTokenURI;
+        whitelistMintStatus = _whitelistMintStatus;
+    }
 
-  /* ================ POLICY FUNCTIONS ================= */
-  /** 
-     @notice Set the baseTokenURI
+    /* ================ POLICY FUNCTIONS ================= */
+    /**
+@notice Set the baseTokenURI
     */
-  /// @param _baseTokenURI to set
-  function setBaseURI(string memory _baseTokenURI) external onlyOwner {
-    baseTokenURI = _baseTokenURI;
-  }
+    /// @param _baseTokenURI to set
+    function setBaseURI(string memory _baseTokenURI) external onlyOwner {
+        baseTokenURI = _baseTokenURI;
+    }
 
-  /**
-        @notice set Max mint for nft
+    /**
+@notice set Max mint for nft
         @param _max uint256
      */
-  function setMaxMint(uint256 _max) external onlyOwner {
-    maxMint = _max;
-  }
+    function setMaxMint(uint256 _max) external onlyOwner {
+        maxMint = _max;
+    }
 
-  /**
-        @notice set token types of token ID
+    /**
+@notice set token types of token ID
         @param _tokenIdInfo uint256 2d array 
         @param _tokenType uint8 0: Platinum 1: Silver 2: Gold
      */
-  function setTokenType(uint256[][] memory _tokenIdInfo, uint8 _tokenType)
+    function setTokenType(uint256[][] memory _tokenIdInfo, uint8 _tokenType)
     external
     onlyOwner
-  {
-    tokenTypeArray[_tokenType] = _tokenIdInfo;
-  }
+    {
+        tokenTypeArray[_tokenType] = _tokenIdInfo;
+    }
 
-  /**
-        @notice set mintstatus  true: whitelistmint false: public mint
+    /**
+@notice set mintstatus  true: whitelistmint false: public mint
         @param status bool
      */
-  function setWhitelistMintStatus(bool status) external onlyOwner {
-    whitelistMintStatus = status;
-  }
+    function setWhitelistMintStatus(bool status) external onlyOwner {
+        whitelistMintStatus = status;
+    }
 
-  /* =============== USER FUNCTIONS ==================== */
+    /* =============== USER FUNCTIONS ==================== */
 
-  /**
-        @notice mint whitelist user
+    /**
+@notice mint whitelist user
         @param _user address
         @return tokenId uint256
      */
-  function mint_whitelist_gh56gui(address _user)
+    function mint_whitelist_gh56gui(address _user)
     external
     payable
     returns (uint256)
-  {
-    require(whitelistMintStatus, "Not whitelist mint");
-    require(totalSupply() <= maxMint, "BalancePass: Max limit reached");
-    uint256 tokenId = _nextTokenId();
+    {
+        require(whitelistMintStatus, "Not whitelist mint");
+        require(totalSupply() <= maxMint, "BalancePass: Max limit reached");
+        uint256 tokenId = _nextTokenId();
 
-    //mint balancepass nft
-    _mint(_user, 1);
+        //mint balancepass nft
+        _mint(_user, 1);
 
-    emit NftMinted(_user, tokenId);
-    return tokenId;
-  }
+        emit NftMinted(_user, tokenId);
+        return tokenId;
+    }
 
-  /** 
-        @notice mint whitelist user
+    /**
+@notice mint whitelist user
         @param _user address
         @return tokenId uint256
      */
-  function mint_public_gh56gui(address _user)
+    function mint_public_gh56gui(address _user)
     external
     payable
     returns (uint256)
-  {
-    require(!whitelistMintStatus, "WhiteList mint period");
-    require(totalSupply() <= maxMint, "BalancePass: Max limit reached");
+    {
+        require(!whitelistMintStatus, "WhiteList mint period");
+        require(totalSupply() <= maxMint, "BalancePass: Max limit reached");
 
-    uint256 tokenId = _nextTokenId();
+        uint256 tokenId = _nextTokenId();
 
-    //mint balancepass nft
-    _mint(_user, 1);
+        //mint balancepass nft
+        _mint(_user, 1);
 
-    emit NftMinted(_user, tokenId);
-    return tokenId;
-  }
+        emit NftMinted(_user, tokenId);
+        return tokenId;
+    }
 
-  /* =============== VIEW FUNCTIONS ==================== */
-  /// @notice Get the base URI
-  function baseURI() public view returns (string memory) {
-    return baseTokenURI;
-  }
+    /* =============== VIEW FUNCTIONS ==================== */
+    /// @notice Get the base URI
+    function baseURI() public view returns (string memory) {
+        return baseTokenURI;
+    }
 
-  /**
-     @notice return tokenURI of specific token ID
+    /**
+@notice return tokenURI of specific token ID
      @param tokenId uint256
      @return // string
      */
-  function tokenURI(uint256 tokenId)
+    function tokenURI(uint256 tokenId)
     public
     view
     override(ERC721A, IERC721A)
     returns (string memory)
-  {
-    string memory tokenURISuffix = string(
-      abi.encodePacked(toString(tokenId), ".json")
-    );
-    string memory _tokenURI = string(
-      abi.encodePacked(baseTokenURI, "/", tokenURISuffix)
-    );
-    return _tokenURI;
-  }
+    {
+        string memory tokenURISuffix = string(
+            abi.encodePacked(toString(tokenId), ".json")
+        );
+        string memory _tokenURI = string(
+            abi.encodePacked(baseTokenURI, "/", tokenURISuffix)
+        );
+        return _tokenURI;
+    }
 
-  /**
-        @notice return tokenTypes based on tokenId
+    /**
+@notice return tokenTypes based on tokenId
         @param _tokenId uint256
         @return // string
      */
-  function getTokenType(uint256 _tokenId) public view returns (string memory) {
-    for (uint8 i = 0; i < 3; i++) {
-      uint256[][] memory temp = tokenTypeArray[i];
-      for (uint256 j = 0; j < temp.length; j++) {
-        if (_tokenId >= temp[j][0] && _tokenId < temp[j][1])
-          if (i == 0) return "Platinum";
-          else if (i == 1) return "Silver";
-          else return "Gold";
-      }
+    function getTokenType(uint256 _tokenId) public view returns (string memory) {
+        for (uint8 i = 0; i < 3; i++) {
+            uint256[][] memory temp = tokenTypeArray[i];
+            for (uint256 j = 0; j < temp.length; j++) {
+                if (_tokenId >= temp[j][0] && _tokenId < temp[j][1])
+                    if (i == 0) return "Platinum";
+                    else if (i == 1) return "Silver";
+                    else return "Gold";
+            }
+        }
+        return "Undefined";
     }
-    return "Undefined";
-  }
 
-  /// @notice current Token ID
-  function currentTokenId() external view returns (uint256) {
-    return _nextTokenId();
-  }
+    /// @notice current Token ID
+    function currentTokenId() external view returns (uint256) {
+        return _nextTokenId();
+    }
 
-  /* =================== SUPPORT FUNCTION =================== */
-  /**
-   * @dev Converts a `uint256` to its ASCII `string` decimal representation.
+    /* =================== SUPPORT FUNCTION =================== */
+    /**
+     * @dev Converts a `uint256` to its ASCII `string` decimal representation.
    */
-  function toString(uint256 value) internal pure returns (string memory) {
-    // Inspired by OraclizeAPI's implementation - MIT licence
-    // https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
+    function toString(uint256 value) internal pure returns (string memory) {
+        // Inspired by OraclizeAPI's implementation - MIT licence
+        // https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
 
-    if (value == 0) {
-      return "0";
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
-    uint256 temp = value;
-    uint256 digits;
-    while (temp != 0) {
-      digits++;
-      temp /= 10;
-    }
-    bytes memory buffer = new bytes(digits);
-    while (value != 0) {
-      digits -= 1;
-      buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-      value /= 10;
-    }
-    return string(buffer);
-  }
 }

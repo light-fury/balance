@@ -4,12 +4,14 @@ async function main() {
   let [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with the account: " + deployer.address);
 
-  const network = "rinkeby";
+  // const network = "rinkeby";
+  const network = "fantom";
 
   const maxMint = 350;
   const baseTokenURI = "ipfs://Qmc8A19qUxy1VWeSDtJj9cGk1DAfE88E47Xb5BFn5Z6Hg1";
   const passNFT = await ethers.getContractFactory("BalancePass");
-  //const passnft = await passNFT.attach("0xa3DDAf083e491ecd5CbdCbd7DcC504cA7c0f2408");
+  //const passnft = await passNFT.attach("0xa3DDAf083e491ecd5CbdCbd7DcC504cA7c0f2408"); // rinkeby
+  //const passnft = await passNFT.attach("0x9845bEec5b84697D3420A66EF20Bb052b55e1981"); // fantom
   const passnft = await passNFT.deploy(maxMint, baseTokenURI, true);
   console.log(`Deployed liqdnft to: ${passnft.address}`);
 
