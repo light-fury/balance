@@ -2,6 +2,7 @@
 pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
 contract BalancePass is ERC721AQueryable, Ownable {
@@ -14,6 +15,9 @@ contract BalancePass is ERC721AQueryable, Ownable {
     uint256 maxMint;
 
     bool public whitelistMintStatus;
+    bytes32 private merkleroot;
+
+    mapping(address => bool)  public whitelistClaimed;
 
     mapping(uint8 => uint256[][]) public tokenTypeArray;
 
@@ -22,15 +26,18 @@ contract BalancePass is ERC721AQueryable, Ownable {
 @notice one time initialize for the Pass Nonfungible Token
      @param _maxMint  uint256 the max number of mints on this chain
      @param _baseTokenURI string token metadata URI
+     @param _merkleroot bytes32 merkle root for whitelist
      */
     constructor(
         uint256 _maxMint,
         string memory _baseTokenURI,
-        bool _whitelistMintStatus
+        bool _whitelistMintStatus,
+        bytes32 _merkleroot
     ) ERC721A("BalancePass", "BALANCE-PASS") {
         maxMint = _maxMint;
         baseTokenURI = _baseTokenURI;
         whitelistMintStatus = _whitelistMintStatus;
+        merkleroot = _merkleroot;
     }
 
     /* ================ POLICY FUNCTIONS ================= */
@@ -84,6 +91,12 @@ contract BalancePass is ERC721AQueryable, Ownable {
     {
         require(whitelistMintStatus, "Not whitelist mint");
         require(totalSupply() <= maxMint, "BalancePass: Max limit reached");
+        require(!whitelistClaimed[_user], "BalancePass: Already claimed");
+        
+        // verify against merkle root
+        bytes32 leaf = keccak256(abi.encodePacked(_user));
+        require(MerkleProof.verify(merkleProof, merkleroot, leaf), "BalancePass: Invalid proof");
+
         uint256 tokenId = _nextTokenId();
 
         //mint balancepass nft
