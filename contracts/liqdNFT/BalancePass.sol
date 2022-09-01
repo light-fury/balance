@@ -81,28 +81,28 @@ contract BalancePass is ERC721AQueryable, Ownable {
 
     /**
 @notice mint whitelist user
-        @param _user address
+        @param _merkleProof merkle proof array
         @return tokenId uint256
      */
-    function mint_whitelist_gh56gui(address _user)
+    function mint_whitelist_gh56gui(bytes32[] calldata _merkleProof)
     external
     payable
     returns (uint256)
     {
         require(whitelistMintStatus, "Not whitelist mint");
         require(totalSupply() <= maxMint, "BalancePass: Max limit reached");
-        require(!whitelistClaimed[_user], "BalancePass: Already claimed");
+        require(!whitelistClaimed[msg.sender], "BalancePass: Already claimed");
         
         // verify against merkle root
-        bytes32 leaf = keccak256(abi.encodePacked(_user));
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
         require(MerkleProof.verify(merkleProof, merkleroot, leaf), "BalancePass: Invalid proof");
 
         uint256 tokenId = _nextTokenId();
 
         //mint balancepass nft
-        _mint(_user, 1);
+        _mint(msg.sender, 1);
 
-        emit NftMinted(_user, tokenId);
+        emit NftMinted(msg.sender, tokenId);
         return tokenId;
     }
 
