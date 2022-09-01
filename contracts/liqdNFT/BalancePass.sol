@@ -95,7 +95,7 @@ contract BalancePass is ERC721AQueryable, Ownable {
         
         // verify against merkle root
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
-        require(MerkleProof.verify(merkleProof, merkleroot, leaf), "BalancePass: Invalid proof");
+        require(MerkleProof.verify(_merkleProof, merkleroot, leaf), "BalancePass: Invalid proof");
 
         uint256 tokenId = _nextTokenId();
 
