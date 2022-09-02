@@ -32,7 +32,7 @@ describe("Token contract", function () {
 
     passNft = await PassNft.deploy(maxMint, maxWalletLimit, baseTokenURI, wl1MintTimestamp, wl2MintTimestamp, publicMintTimestamp, merkleRoot, merkleRoot);
   });
-  
+
   it("Validate basics", async function () {
     expect(await passNft.name()).to.equal(nftName);
     expect(await passNft.symbol()).to.equal(nftSymbol);
@@ -181,8 +181,32 @@ describe("Token contract", function () {
     await expect(passNft.connect(nonOwner).setMaxMintWalletLimit(newMax)).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
-  // set token type + // get token type
-  // TODO: add test for token type
+  it("Reveal token types", async function () {
+    // Platinum
+    await passNft.setTokenType([[0, 1], [5, 7]], 2);
+    // Gold
+    await passNft.setTokenType([[2, 4]], 1);
+    // Genesis
+    await passNft.setTokenType([[8, 10], [11, 350]], 0);
+  });
+
+  it("Get proper token type", async function () {
+	  const platinumArray = [0, 1, 5, 6, 7];
+	  const goldArray = [2, 3, 4];
+
+	  for (let i = 0; i < platinumArray.length; i++) {
+		  expect(await passNft.getTokenType(platinumArray[i])).to.is.eq("Platinum");
+	  }
+	  for (let i = 0; i < goldArray.length; i++) {
+		  expect(await passNft.getTokenType(goldArray[i])).to.is.eq("Gold");
+	  }
+	  for (let i = 0; i < 11 /* can be same for 350, but longer */; i++) {
+		  if (platinumArray.indexOf(i) !== -1) continue;
+		  if (goldArray.indexOf(i) !== -1) continue;
+
+		  expect(await passNft.getTokenType(i)).to.is.eq("Genesis");
+	  }
+  });
 
   // set whitelist1root
   it("Owner should be able to change whitelist 1", async function () {
@@ -240,7 +264,7 @@ describe("Token contract", function () {
   // setApprovalForAll
   // getApprove
   // isApprovedForAll
-  
+
   // ERC721aQueryable: https://github.com/chiru-labs/ERC721A/blob/main/contracts/extensions/IERC721AQueryable.sol
   // explicitOwnershipOf
   // explicitOwnershipsOf
