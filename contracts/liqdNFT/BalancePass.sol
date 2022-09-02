@@ -3,34 +3,48 @@
 pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
+/// @notice Balance Alpha Pass NFT
+/// Mint limits:
+/// - there is limit 1 NFT per wallet
+/// - using multiple wallets in same transaction through your SC is forbidden, so tx.origin should be direct msg.sender
+/// - primary and secondary WL mints (and public mint if hard cap was not reached) will start at specific unix time of block
 contract BalancePass is ERC721AQueryable, Ownable {
-    /* ================== EVENTS ========================== */
-    event NftMinted(address indexed user, uint256 tokenId);
 
-    /* ================== STATE VARIABLES ================== */
+    using SafeERC20 for IERC20;
 
     string public baseTokenURI;
-    uint maxMint;
-    uint maxMintWalletLimit;
 
-    bool public whitelistMintStatus;
+    uint public maxMint;
+    uint public maxMintWalletLimit;
+    uint public whitelist1MintStartTimestamp;
+    uint public whitelist2MintStartTimestamp;
+    uint public publicMintStartTimestamp;
     bytes32 private whitelist1Root;
     bytes32 private whitelist2Root;
-
     mapping(address => uint8) public mintWalletLimit;
 
-    mapping(uint8 => uint256[][]) public tokenTypeArray;
+    mapping(uint8 => uint[][]) public tokenTypeArray;
 
-    /* ================= INITIALIZATION =================== */
+    ///
+    /// events
+    ///
+
+    event NftMinted(address indexed _user, uint _tokenId);
+
     /**
-    @notice one time initialize for the Pass Nonfungible Token
+        @notice one time initialize for the Pass Nonfungible Token
         @param _maxMint  uint256 the max number of mints on this chain
         @param _maxMintWalletLimit  uint256 the max number of mints per wallet
         @param _baseTokenURI string token metadata URI
-        @param _whitelistMintStatus boolean if the whitelist only is active
+        @param _whitelist1MintStartTimestamp primary WL timestamp
+        @param _whitelist2MintStartTimestamp secondary WL timestamp
+        @param _publicMintStartTimestamp public mint timestamp
         @param _whitelist1Root bytes32 merkle root for whitelist
         @param _whitelist2Root bytes32 merkle root for whitelist
      */
@@ -38,139 +52,136 @@ contract BalancePass is ERC721AQueryable, Ownable {
         uint _maxMint,
         uint _maxMintWalletLimit,
         string memory _baseTokenURI,
-        bool _whitelistMintStatus,
+        uint _whitelist1MintStartTimestamp,
+        uint _whitelist2MintStartTimestamp,
+        uint _publicMintStartTimestamp,
         bytes32 _whitelist1Root,
         bytes32 _whitelist2Root
-    ) ERC721A("BalancePass", "BALANCE-PASS") {
+    ) ERC721A("Balance Pass", "BALANCE-PASS") {
         maxMint = _maxMint;
         maxMintWalletLimit = _maxMintWalletLimit;
         baseTokenURI = _baseTokenURI;
-        whitelistMintStatus = _whitelistMintStatus;
+        whitelist1MintStartTimestamp = _whitelist1MintStartTimestamp;
+        whitelist2MintStartTimestamp = _whitelist2MintStartTimestamp;
+        publicMintStartTimestamp = _publicMintStartTimestamp;
         whitelist1Root = _whitelist1Root;
         whitelist2Root = _whitelist2Root;
     }
 
-    /* ================ POLICY FUNCTIONS ================= */
-    /**
-    @notice Set the baseTokenURI
-        @param _baseTokenURI to set
-    */
+    /// @notice set new metadata uri prefix
+    /// @param _baseTokenURI new uri prefix (without /<tokenId>.json)
     function setBaseURI(string memory _baseTokenURI) external onlyOwner {
         baseTokenURI = _baseTokenURI;
     }
 
-    /**
-    @notice set Max mint for nft
-        @param _max uint256
-     */
-    function setMaxMint(uint256 _max) external onlyOwner {
-        maxMint = _max;
+    /// @notice alter existing hard cap
+    /// @param _maxMint new hard cap
+    function setMaxMint(uint _maxMint) external onlyOwner {
+        maxMint = _maxMint;
     }
 
-    /**
-    @notice set max per wallet limit
-        @param _maxMintWalletLimit uint
-     */ 
+    /// @notice change maximum allowed images per wallet
+    /// @param _maxMintWalletLimit new limit
     function setMaxMintWalletLimit(uint _maxMintWalletLimit) external onlyOwner {
         maxMintWalletLimit = _maxMintWalletLimit;
     }
 
+    /// @notice set unix timestamp when primary WL mint starts
+    /// @param _whitelist1MintStartTimestamp unix time in seconds
+    function setWhitelist1MintStartTimestamp(uint _whitelist1MintStartTimestamp) external onlyOwner {
+        whitelist1MintStartTimestamp = _whitelist1MintStartTimestamp;
+    }
+
+    /// @notice set unix timestamp when secondary WL mint starts
+    /// @param _whitelist2MintStartTimestamp unix time in seconds
+    function setWhitelist2MintStartTimestamp(uint _whitelist2MintStartTimestamp) external onlyOwner {
+        whitelist2MintStartTimestamp = _whitelist2MintStartTimestamp;
+    }
+
+    /// @notice set unix timestamp when public mint starts
+    /// @param _publicMintStartTimestamp unix time in seconds
+    function setPublicMintStartTimestamp(uint _publicMintStartTimestamp) external onlyOwner {
+        publicMintStartTimestamp = _publicMintStartTimestamp;
+    }
+
     /**
-    @notice set token types of token ID
-        @param _tokenIdInfo uint256 2d array 
-        @param _tokenType uint8 0: Platinum 1: Silver 2: Gold
+        @notice set token types of token ID
+        @param _tokenIdInfo uint256 2d array, example: [[1,10],[11,30]] which means 1 and 10 are in first interval and 11 and 30 are in second
+        @param _tokenType uint8 0: Genesis 1: Gold 2: Platinum
      */
-    function setTokenType(uint256[][] memory _tokenIdInfo, uint8 _tokenType)
-    external
-    onlyOwner
-    {
+    function setTokenType(uint[][] memory _tokenIdInfo, uint8 _tokenType) external onlyOwner {
         tokenTypeArray[_tokenType] = _tokenIdInfo;
     }
 
     /**
-    @notice set merkle root for initial whitelist
-        @param _merkleroot bytes32 merkle root for primary whitelist
+        @notice set merkle root for initial whitelist
+        @param _whitelist1Root bytes32 merkle root for primary whitelist
      */
-    function setWhitelist1Root(bytes32 _merkleroot)
-    external
-    onlyOwner
-    {
-        whitelist1Root = _merkleroot;
+    function setWhitelist1Root(bytes32 _whitelist1Root) external onlyOwner {
+        whitelist1Root = _whitelist1Root;
     }
 
     /**
-    @notice set merkle root for secondary whitelist
-        @param _merkleroot bytes32 merkle root for primary whitelist
+        @notice set merkle root for secondary whitelist
+        @param _whitelist2Root bytes32 merkle root for secondary whitelist
      */
-    function setWhitelist2Root(bytes32 _merkleroot)
-    external
-    onlyOwner
-    {
-        whitelist2Root = _merkleroot;
-    }
-
-    /**
-    @notice set mintstatus  true: whitelistmint false: public mint
-        @param status bool
-     */
-    function setWhitelistMintStatus(bool status) external onlyOwner {
-        whitelistMintStatus = status;
+    function setWhitelist2Root(bytes32 _whitelist2Root) external onlyOwner {
+        whitelist2Root = _whitelist2Root;
     }
 
     /* =============== USER FUNCTIONS ==================== */
 
-    /**
-    @notice mint whitelist user
-        @param _merkleProof merkle proof array
-        @return tokenId uint256
-     */
-    function mint_whitelist_gh56gui(bytes32[] calldata _merkleProof)
-    external
-    payable
-    returns (uint256)
-    {
-        require(whitelistMintStatus, "Not whitelist mint");
-        require(totalSupply() <= maxMint, "BalancePass: Max limit reached");
-        require(mintWalletLimit[msg.sender] + 1 <= maxMintWalletLimit, "BalancePass: Max wallet limit reached");
-        
+
+    /// @notice primary WL mint
+    /// @param _merkleProof merkle proof array
+    function mint_whitelist1(bytes32[] calldata _merkleProof) external payable returns (uint) {
+        require(block.timestamp >= whitelist1MintStartTimestamp && block.timestamp <= whitelist2MintStartTimestamp, "WHITELIST1_MINT_DIDNT_START");
+
         // verify against merkle root
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
         require(MerkleProof.verify(_merkleProof, whitelist1Root, leaf), "BalancePass: Invalid proof");
 
-        require(totalSupply() < maxMint, "BalancePass: Max limit reached");
-        uint256 tokenId = _nextTokenId();
-
-        //mint balancepass nft
-
-        _mint(msg.sender, 1);
-        mintWalletLimit[msg.sender] += 1;
-        emit NftMinted(msg.sender, tokenId);
-
-        return tokenId;
+        return doMint(true);
     }
 
-    /**
-    @notice mint whitelist user
-        @param _user address
-        @return tokenId uint256
-     */
-    function mint_public_gh56gui(address _user)
-    external
-    payable
-    returns (uint256)
-    {
-        require(!whitelistMintStatus, "WhiteList mint period");
-        require(totalSupply() < maxMint, "BalancePass: Max limit reached");
-        require(mintWalletLimit[_user] + 1 <= maxMintWalletLimit, "BalancePass: Max wallet limit reached");
+    /// @notice secondary WL mint
+    /// @param _merkleProof merkle proof array
+    function mint_whitelist2(bytes32[] calldata _merkleProof) external payable returns (uint) {
+        require(block.timestamp >= whitelist2MintStartTimestamp && block.timestamp <= publicMintStartTimestamp, "WHITELIST2_MINT_DIDNT_START");
 
-        uint256 tokenId = _nextTokenId();
+        // verify against merkle root
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
+        require(MerkleProof.verify(_merkleProof, whitelist2Root, leaf), "BalancePass: Invalid proof");
 
-        //mint balancepass nft
-        _mint(_user, 1);
+        return doMint(true);
+    }
 
-        emit NftMinted(_user, tokenId);
+    /// @notice public mint
+    function mint_public() external payable returns (uint) {
+        require(block.timestamp >= publicMintStartTimestamp, "PUBLIC_MINT_DIDNT_START");
 
-        mintWalletLimit[_user] += 1;
+        return doMint(true);
+    }
+
+    /// @notice owner mint
+    function mint_owner() external payable onlyOwner returns (uint) {
+        return doMint(false);
+    }
+
+    function doMint(bool _limitCheck) internal returns (uint) {
+        require(totalSupply() < maxMint, "TOTAL_SUPPLY_REACHED");
+        // this should mitigate to use multiple addresses in one transaction
+        require(msg.sender == tx.origin, "SMART_CONTRACTS_FORBIDDEN");
+        if (_limitCheck) {
+            require(mintWalletLimit[msg.sender] + 1 <= maxMintWalletLimit, "MAX_WALLET_LIMIT_REACHED");
+        }
+
+        mintWalletLimit[msg.sender] += 1;
+
+        uint tokenId = _nextTokenId();
+        _mint(msg.sender, 1);
+
+        emit NftMinted(msg.sender, tokenId);
 
         return tokenId;
     }
@@ -181,74 +192,44 @@ contract BalancePass is ERC721AQueryable, Ownable {
         return baseTokenURI;
     }
 
-    /**
-    @notice return tokenURI of specific token ID
-        @param tokenId uint256
-        @return // string
-     */
-    function tokenURI(uint256 tokenId)
-    public
-    view
-    override(ERC721A, IERC721A)
-    returns (string memory)
-    {
-        string memory tokenURISuffix = string(
-            abi.encodePacked(toString(tokenId), ".json")
-        );
-        string memory _tokenURI = string(
-            abi.encodePacked(baseTokenURI, "/", tokenURISuffix)
-        );
-        return _tokenURI;
+    /// @notice return tokenURI of specific token ID
+    /// @param _tokenId tokenid
+    /// @return _tokenURI token uri
+    function tokenURI(uint _tokenId) public view override(ERC721A, IERC721A) returns (string memory _tokenURI) {
+        _tokenURI = string(abi.encodePacked(baseTokenURI, "/", Strings.toString(_tokenId), ".json"));
+    }
+
+    /// @notice current Token ID
+    function currentTokenId() external view returns (uint256) {
+        return _nextTokenId();
     }
 
     /**
-    @notice return tokenTypes based on tokenId
+        @notice return tokenTypes based on tokenId
         @param _tokenId uint256
         @return // string
      */
-    function getTokenType(uint256 _tokenId) public view returns (string memory) {
+    function getTokenType(uint _tokenId) public view returns (string memory) {
         for (uint8 i = 0; i < 3; i++) {
-            uint256[][] memory temp = tokenTypeArray[i];
-            for (uint256 j = 0; j < temp.length; j++) {
-                if (_tokenId >= temp[j][0] && _tokenId < temp[j][1])
-                    if (i == 0) return "Platinum";
-                    else if (i == 1) return "Silver";
-                    else return "Gold";
+            uint[][] memory temp = tokenTypeArray[i];
+            for (uint j = 0; j < temp.length; j++) {
+                if (_tokenId >= temp[j][0] && _tokenId <= temp[j][1])
+                    if (i == 2) return "Platinum";
+                    else if (i == 1) return "Gold";
+                    else return "Genesis";
             }
         }
         return "Undefined";
     }
 
-    /**
-    @notice current Token ID
-    */
-    function currentTokenId() external view returns (uint256) {
-        return _nextTokenId();
+    /// @notice can recover tokens sent by mistake to this CA
+    /// @param token CA
+    function recoverTokens(IERC20 token) external onlyOwner {
+        token.safeTransfer(owner(), token.balanceOf(address(this)));
     }
 
-    /* =================== SUPPORT FUNCTION =================== */
-    /**
-     * @dev Converts a `uint256` to its ASCII `string` decimal representation.
-   */
-    function toString(uint256 value) internal pure returns (string memory) {
-        // Inspired by OraclizeAPI's implementation - MIT licence
-        // https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
-
-        if (value == 0) {
-            return "0";
-        }
-        uint256 temp = value;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
-        }
-        bytes memory buffer = new bytes(digits);
-        while (value != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        return string(buffer);
+    function recoverEth() external onlyOwner {
+        payable(owner()).transfer(address(this).balance);
     }
+
 }
