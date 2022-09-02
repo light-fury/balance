@@ -140,6 +140,7 @@ describe("Token contract", function () {
   });
 
   // transferFrom
+  // ownerOf
   it("Should be able to transfer tokens between wallets", async function () {
     const from = owner.address;
     const to = nonOwner.address;
@@ -147,6 +148,23 @@ describe("Token contract", function () {
     await passNft.transferFrom(from, to, tokenId);
     expect(await passNft.ownerOf(tokenId)).to.equal(to);
   });
+
+  // additional tests to write
+  // ERC721a
+  // totalsupply
+  // supportsInterface
+  // balanceOf
+  // safeTransferFrom
+  // approve
+  // setApprovalForAll
+  // getApprove
+  // isApprovedForAll
+  
+  // ERC721aQueryable
+  // explicitOwnershipOf
+  // explicitOwnershipsOf
+  // tokensOfOwnerIn
+  // tokensOfOwner
 });
 
 const getMerkleTree = (includeAddressArry) => {
