@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -11,9 +12,11 @@ contract BalancePass is ERC721AQueryable, Ownable {
     /* ================== STATE VARIABLES ================== */
 
     string public baseTokenURI;
-    uint256 maxMint;
+    uint maxMint;
+    uint maxMintWalletLimit;
 
     bool public whitelistMintStatus;
+    mapping(address => uint8) public mintWalletLimit;
 
     mapping(uint8 => uint256[][]) public tokenTypeArray;
 
@@ -21,14 +24,17 @@ contract BalancePass is ERC721AQueryable, Ownable {
     /**
 @notice one time initialize for the Pass Nonfungible Token
      @param _maxMint  uint256 the max number of mints on this chain
+     @param _maxMintWalletLimit  uint256 maximum number of items one wallet can mint either in WL or public mint
      @param _baseTokenURI string token metadata URI
      */
     constructor(
-        uint256 _maxMint,
+        uint _maxMint,
+        uint _maxMintWalletLimit,
         string memory _baseTokenURI,
         bool _whitelistMintStatus
     ) ERC721A("BalancePass", "BALANCE-PASS") {
         maxMint = _maxMint;
+        maxMintWalletLimit = _maxMintWalletLimit;
         baseTokenURI = _baseTokenURI;
         whitelistMintStatus = _whitelistMintStatus;
     }
@@ -46,8 +52,12 @@ contract BalancePass is ERC721AQueryable, Ownable {
 @notice set Max mint for nft
         @param _max uint256
      */
-    function setMaxMint(uint256 _max) external onlyOwner {
+    function setMaxMint(uint _max) external onlyOwner {
         maxMint = _max;
+    }
+
+    function setMaxMintWalletLimit(uint _maxMintWalletLimit) external onlyOwner {
+        maxMintWalletLimit = _maxMintWalletLimit;
     }
 
     /**
@@ -83,13 +93,17 @@ contract BalancePass is ERC721AQueryable, Ownable {
     returns (uint256)
     {
         require(whitelistMintStatus, "Not whitelist mint");
-        require(totalSupply() <= maxMint, "BalancePass: Max limit reached");
+        require(totalSupply() < maxMint, "BalancePass: Max limit reached");
+        require(mintWalletLimit[_user] + 1 <= maxMintWalletLimit, "BalancePass: Max wallet limit reached");
         uint256 tokenId = _nextTokenId();
 
         //mint balancepass nft
         _mint(_user, 1);
 
         emit NftMinted(_user, tokenId);
+
+        mintWalletLimit[_user] += 1;
+
         return tokenId;
     }
 
@@ -104,7 +118,8 @@ contract BalancePass is ERC721AQueryable, Ownable {
     returns (uint256)
     {
         require(!whitelistMintStatus, "WhiteList mint period");
-        require(totalSupply() <= maxMint, "BalancePass: Max limit reached");
+        require(totalSupply() < maxMint, "BalancePass: Max limit reached");
+        require(mintWalletLimit[_user] + 1 <= maxMintWalletLimit, "BalancePass: Max wallet limit reached");
 
         uint256 tokenId = _nextTokenId();
 
@@ -112,6 +127,9 @@ contract BalancePass is ERC721AQueryable, Ownable {
         _mint(_user, 1);
 
         emit NftMinted(_user, tokenId);
+
+        mintWalletLimit[_user] += 1;
+
         return tokenId;
     }
 
