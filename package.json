@@ -15,7 +15,7 @@
     "erc721a": "^4.2.2",
     "erc721a-upgradeable": "^4.2.2",
     "keccak256": "^1.0.6",
-    "merkletreejs": "^0.2.31",
+    "merkletreejs": "^0.2.32",
     "prand": "^0.0.3"
   },
   "devDependencies": {
