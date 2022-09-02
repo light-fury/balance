@@ -37,17 +37,15 @@ contract BalancePass is ERC721AQueryable, Ownable {
 
     event NftMinted(address indexed _user, uint _tokenId);
 
-    /**
-        @notice one time initialize for the Pass Nonfungible Token
-        @param _maxMint  uint256 the max number of mints on this chain
-        @param _maxMintWalletLimit  uint256 the max number of mints per wallet
-        @param _baseTokenURI string token metadata URI
-        @param _whitelist1MintStartTimestamp primary WL timestamp
-        @param _whitelist2MintStartTimestamp secondary WL timestamp
-        @param _publicMintStartTimestamp public mint timestamp
-        @param _whitelist1Root bytes32 merkle root for whitelist
-        @param _whitelist2Root bytes32 merkle root for whitelist
-     */
+    /// @notice one time initialize for the Pass Nonfungible Token
+    /// @param _maxMint  uint256 the max number of mints on this chain
+    /// @param _maxMintWalletLimit  uint256 the max number of mints per wallet
+    /// @param _baseTokenURI string token metadata URI
+    /// @param _whitelist1MintStartTimestamp primary WL timestamp
+    /// @param _whitelist2MintStartTimestamp secondary WL timestamp
+    /// @param _publicMintStartTimestamp public mint timestamp
+    /// @param _whitelist1Root bytes32 merkle root for whitelist
+    /// @param _whitelist2Root bytes32 merkle root for whitelist
     constructor(
         uint _maxMint,
         uint _maxMintWalletLimit,
@@ -104,33 +102,28 @@ contract BalancePass is ERC721AQueryable, Ownable {
         publicMintStartTimestamp = _publicMintStartTimestamp;
     }
 
-    /**
-        @notice set token types of token ID
-        @param _tokenIdInfo uint256 2d array, example: [[1,10],[11,30]] which means 1 and 10 are in first interval and 11 and 30 are in second
-        @param _tokenType uint8 0: Genesis 1: Gold 2: Platinum
-     */
+    /// @notice set token types of token ID
+    /// @param _tokenIdInfo uint256 2d array, example: [[1,10],[11,30]] which means 1 and 10 are in first interval and 11 and 30 are in second
+    /// @param _tokenType uint8 0: Genesis 1: Gold 2: Platinum
     function setTokenType(uint[][] memory _tokenIdInfo, uint8 _tokenType) external onlyOwner {
         tokenTypeArray[_tokenType] = _tokenIdInfo;
     }
 
-    /**
-        @notice set merkle root for initial whitelist
-        @param _whitelist1Root bytes32 merkle root for primary whitelist
-     */
+    /// @notice set merkle root for initial whitelist
+    /// @param _whitelist1Root bytes32 merkle root for primary whitelist
     function setWhitelist1Root(bytes32 _whitelist1Root) external onlyOwner {
         whitelist1Root = _whitelist1Root;
     }
 
-    /**
-        @notice set merkle root for secondary whitelist
-        @param _whitelist2Root bytes32 merkle root for secondary whitelist
-     */
+    /// @notice set merkle root for secondary whitelist
+    /// @param _whitelist2Root bytes32 merkle root for secondary whitelist
     function setWhitelist2Root(bytes32 _whitelist2Root) external onlyOwner {
         whitelist2Root = _whitelist2Root;
     }
 
-    /* =============== USER FUNCTIONS ==================== */
-
+    ///
+    /// business logic
+    ///
 
     /// @notice primary WL mint
     /// @param _merkleProof merkle proof array
@@ -186,7 +179,6 @@ contract BalancePass is ERC721AQueryable, Ownable {
         return tokenId;
     }
 
-    /* =============== VIEW FUNCTIONS ==================== */
     /// @notice Get the base URI
     function baseURI() public view returns (string memory) {
         return baseTokenURI;
@@ -204,11 +196,9 @@ contract BalancePass is ERC721AQueryable, Ownable {
         return _nextTokenId();
     }
 
-    /**
-        @notice return tokenTypes based on tokenId
-        @param _tokenId uint256
-        @return // string
-     */
+    /// @notice return tokenTypes based on tokenId
+    /// @param _tokenId uint256
+    /// @return token type
     function getTokenType(uint _tokenId) public view returns (string memory) {
         for (uint8 i = 0; i < 3; i++) {
             uint[][] memory temp = tokenTypeArray[i];
