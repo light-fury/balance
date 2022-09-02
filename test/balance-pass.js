@@ -14,7 +14,7 @@ describe("Token contract", function () {
   let passNft;
 
   before(async () => {
-    const merkleRoot = getMerkleTree().getRoot();
+    const merkleRoot = getRootHash(getMerkleTree());
     [owner] = await ethers.getSigners();
     const PassNft = await ethers.getContractFactory("BalancePass");
     passNft = await PassNft.deploy(maxMint, baseTokenURI, true, merkleRoot);
@@ -27,25 +27,14 @@ describe("Token contract", function () {
   });
 
   it("Validate whitelist", async function () {
-    const whitelistAddress1 = "0x45fFb7aC7bC4eF4Fe1A095C71EcFc237523355e7";
-    const whitelistAddress2 = "0x1667cC75D4E52a5cCe71cDb25606Dcaf5B625264";
     const merkleTree = getMerkleTree();
-
-    const proof1 = getProof(whitelistAddress1, merkleTree);
-    console.log(proof1);
+    const proof1 = getProof(owner.address, merkleTree);
 
     await passNft.mint_whitelist_gh56gui(proof1);
-    const walletOfOwner = await passNft.walletOfOwner(owner.address);
-    expect(walletOfOwner[0].eq(1)).to.equal(true);
+    const walletOfOwner = await passNft.tokensOfOwner(owner.address);
+    expect(walletOfOwner[0].toNumber()).to.equal(0);
   });
 });
-
-
-const getProof = (address, merkleTree) => {
-  const hashedAddress = keccak256(address);
-  const proof = merkleTree.getHexProof(hashedAddress);
-  return proof;
-}
 
 const getMerkleTree = () => {
   const whiteListAddresses = [
@@ -59,6 +48,7 @@ const getMerkleTree = () => {
     "0xb236f9f249390038CC3C4E7EC6a6260e8540AEe0",
     "0x8480D5026d12AD81d9c1B5fbD40962d5c454f228",
     "0xc8D127C56d05dad30cE91F388de3FD65645dd9CA",
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     "0x7a25Fc65aa566796790cf1567a5044020734CD50",
   ];
 
@@ -67,7 +57,14 @@ const getMerkleTree = () => {
     return merkleTree;
 }
 
+
+const getProof = (address, merkleTree) => {
+  const hashedAddress = keccak256(address);
+  const proof = merkleTree.getHexProof(hashedAddress);
+  return proof;
+}
+
 const getRootHash = (merkleTree) => {
   const rootHash = merkleTree.getRoot();
-  return rootHash.toString('hex');
+  return `0x${rootHash.toString('hex')}`;
 }
