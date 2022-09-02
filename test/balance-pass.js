@@ -44,93 +44,109 @@ describe("Token contract", function () {
     await expect(passNft.mint_whitelist_gh56gui(proof1)).to.be.revertedWith("BalancePass: Max wallet limit reached");
   });
 
-// set base uri
-it("Owner should be able to change base uri", async function () {
-  const newBaseUri = "ipfs://Qmc8A19qUxy1VWeSDtJj9cGk1";
-  await passNft.setBaseURI(newBaseUri);
-  expect(await passNft.baseTokenURI()).to.equal(newBaseUri);
-  await passNft.setBaseURI(baseTokenURI);
-});
+  // set base uri
+  it("Owner should be able to change base uri", async function () {
+    const newBaseUri = "ipfs://Qmc8A19qUxy1VWeSDtJj9cGk1";
+    await passNft.setBaseURI(newBaseUri);
+    expect(await passNft.baseTokenURI()).to.equal(newBaseUri);
+    await passNft.setBaseURI(baseTokenURI);
+  });
 
-it("Non owner should not be able to change base uri", async function () {
-  const newBaseUri = "ipfs://Qmc8A19qUxy1VWeSDtJj9cGk1";
-  await expect(passNft.connect(nonOwner).setBaseURI(newBaseUri)).to.be.revertedWith("Ownable: caller is not the owner");
-});
+  it("Non owner should not be able to change base uri", async function () {
+    const newBaseUri = "ipfs://Qmc8A19qUxy1VWeSDtJj9cGk1";
+    await expect(passNft.connect(nonOwner).setBaseURI(newBaseUri)).to.be.revertedWith("Ownable: caller is not the owner");
+  });
 
-// set max mint
-// set base uri
-it("Owner should be able to change max mint", async function () {
-  const newMax = 500;
-  await passNft.setMaxMint(newMax);
-  await passNft.setMaxMint(350);
-});
+  // set max mint
+  // set base uri
+  it("Owner should be able to change max mint", async function () {
+    const newMax = 500;
+    await passNft.setMaxMint(newMax);
+    await passNft.setMaxMint(350);
+  });
 
-it("Non-owner should NOT be able to change max mint", async function () {
-  const newMax = 500;
-  await expect(passNft.connect(nonOwner).setMaxMint(newMax)).to.be.revertedWith("Ownable: caller is not the owner");
-});
+  it("Non-owner should NOT be able to change max mint", async function () {
+    const newMax = 500;
+    await expect(passNft.connect(nonOwner).setMaxMint(newMax)).to.be.revertedWith("Ownable: caller is not the owner");
+  });
 
-// setmaxmintwalletlimit
-it("Owner should be able to change max wallet limit", async function () {
-  const newMax = 5;
-  await passNft.setMaxMintWalletLimit(newMax);
-  await passNft.setMaxMintWalletLimit(1);
-});
+  // setmaxmintwalletlimit
+  it("Owner should be able to change max wallet limit", async function () {
+    const newMax = 5;
+    await passNft.setMaxMintWalletLimit(newMax);
+    await passNft.setMaxMintWalletLimit(1);
+  });
 
-it("Non-owner should NOT be able to change max wallet limit", async function () {
-  const newMax = 500;
-  await expect(passNft.connect(nonOwner).setMaxMintWalletLimit(newMax)).to.be.revertedWith("Ownable: caller is not the owner");
-});
+  it("Non-owner should NOT be able to change max wallet limit", async function () {
+    const newMax = 500;
+    await expect(passNft.connect(nonOwner).setMaxMintWalletLimit(newMax)).to.be.revertedWith("Ownable: caller is not the owner");
+  });
 
-// set token type + // get token type
+  // set token type + // get token type
+  // TODO: add test for token type
 
-// set whitelist1root
-it("Owner should be able to change whitelist 1", async function () {
-  const newMax = 5;
-  await passNft.setWhitelist1Root(getRootHash(getMerkleTree([owner.address, inRoot.address])));
-});
+  // set whitelist1root
+  it("Owner should be able to change whitelist 1", async function () {
+    const newMax = 5;
+    await passNft.setWhitelist1Root(getRootHash(getMerkleTree([owner.address, inRoot.address])));
+  });
 
-it("Non-Owner should not be able to change whitelist 1", async function () {
-  const newMax = 500;
-  await expect(passNft.connect(nonOwner)
-    .setWhitelist1Root(getRootHash(getMerkleTree([owner.address, inRoot.address]))))
-    .to.be.revertedWith("Ownable: caller is not the owner");
-});
+  it("Non-Owner should not be able to change whitelist 1", async function () {
+    const newMax = 500;
+    await expect(passNft.connect(nonOwner)
+      .setWhitelist1Root(getRootHash(getMerkleTree([owner.address, inRoot.address]))))
+      .to.be.revertedWith("Ownable: caller is not the owner");
+  });
 
-// set whitelist2root
-it("Owner should be able to change whitelist 2", async function () {
-  const newMax = 5;
-  await passNft.setWhitelist2Root(getRootHash(getMerkleTree([owner.address, inRoot.address])));
-});
+  // set whitelist2root
+  it("Owner should be able to change whitelist 2", async function () {
+    const newMax = 5;
+    await passNft.setWhitelist2Root(getRootHash(getMerkleTree([owner.address, inRoot.address])));
+  });
 
-it("Non-Owner should not be able to change whitelist 2", async function () {
-  const newMax = 500;
-  await expect(passNft.connect(nonOwner)
-    .setWhitelist2Root(getRootHash(getMerkleTree([owner.address, inRoot.address]))))
-    .to.be.revertedWith("Ownable: caller is not the owner");
-});
+  it("Non-Owner should not be able to change whitelist 2", async function () {
+    const newMax = 500;
+    await expect(passNft.connect(nonOwner)
+      .setWhitelist2Root(getRootHash(getMerkleTree([owner.address, inRoot.address]))))
+      .to.be.revertedWith("Ownable: caller is not the owner");
+  });
 
-// set whitelistmint status
-it("Owner should be able to change set whitelist status", async function () {
-  await passNft.setWhitelistMintStatus(false);
-});
+  // set whitelistmint status
+  it("Owner should be able to change set whitelist status", async function () {
+    await passNft.setWhitelistMintStatus(false);
+  });
 
-it("Non-Owner should not set whitelist status", async function () {
-  const newMax = 500;
-  await expect(passNft.connect(nonOwner)
-    .setWhitelistMintStatus(false))
-    .to.be.revertedWith("Ownable: caller is not the owner");
-});
+  it("Non-Owner should not set whitelist status", async function () {
+    const newMax = 500;
+    await expect(passNft.connect(nonOwner)
+      .setWhitelistMintStatus(false))
+      .to.be.revertedWith("Ownable: caller is not the owner");
+  });
 
-// mint secondary
+  // mint secondary
+  // todo: add test for secondary minting
 
-// mint public
+  // mint public
+  // todo: add test for public minting
 
-// validate token uri
+  // validate token uri
+  it("Token uri should provide expected uri", async function () {
+    expect(await passNft.tokenURI(0)).to.equal(`${baseTokenURI}/0.json`);
+  });
 
-// validate current token id
+  // validate current token id
+  it("Current token Id should be +1 the last one generated", async function () {
+    expect(await passNft.currentTokenId()).to.equal(1);
+  });
 
-// transferFrom
+  // transferFrom
+  it("Should be able to transfer tokens between wallets", async function () {
+    const from = owner.address;
+    const to = nonOwner.address;
+    const tokenId = 0;
+    await passNft.transferFrom(from, to, tokenId);
+    expect(await passNft.ownerOf(tokenId)).to.equal(to);
+  });
 });
 
 const getMerkleTree = (includeAddressArry) => {
