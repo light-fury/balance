@@ -6,6 +6,8 @@ const { default: MerkleTree } = require("merkletreejs");
 describe("Token contract", function () {
   let owner;
   const maxMint = 350;
+  const maxWalletLimit = 1;
+  const whitelistMintStatus = true;
   const baseTokenURI = "ipfs://Qmc8A19qUxy1VWeSDtJj9cGk1DAfE88E47Xb5BFn5Z6Hg1";
   const nftName = "BalancePass";
   const nftSymbol = "BALANCE-PASS";
@@ -17,7 +19,7 @@ describe("Token contract", function () {
     const merkleRoot = getRootHash(getMerkleTree());
     [owner] = await ethers.getSigners();
     const PassNft = await ethers.getContractFactory("BalancePass");
-    passNft = await PassNft.deploy(maxMint, baseTokenURI, true, merkleRoot);
+    passNft = await PassNft.deploy(maxMint, maxWalletLimit, baseTokenURI, whitelistMintStatus, merkleRoot, merkleRoot);
   });
   
   it("Validate basics", async function () {

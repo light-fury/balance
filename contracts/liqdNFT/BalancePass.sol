@@ -17,51 +17,66 @@ contract BalancePass is ERC721AQueryable, Ownable {
     uint maxMintWalletLimit;
 
     bool public whitelistMintStatus;
-    bytes32 private merkleroot;
+    bytes32 private whitelist1Root;
+    bytes32 private whitelist2Root;
 
-    mapping(address => bool)  public whitelistClaimed;
     mapping(address => uint8) public mintWalletLimit;
 
     mapping(uint8 => uint256[][]) public tokenTypeArray;
 
     /* ================= INITIALIZATION =================== */
     /**
-@notice one time initialize for the Pass Nonfungible Token
-     @param _maxMint  uint256 the max number of mints on this chain
-     @param _baseTokenURI string token metadata URI
-     @param _merkleroot bytes32 merkle root for whitelist
+    @notice one time initialize for the Pass Nonfungible Token
+        @param _maxMint  uint256 the max number of mints on this chain
+        @param _maxMintWalletLimit  uint256 the max number of mints per wallet
+        @param _baseTokenURI string token metadata URI
+        @param _whitelistMintStatus boolean if the whitelist only is active
+        @param _whitelist1Root bytes32 merkle root for whitelist
+        @param _whitelist2Root bytes32 merkle root for whitelist
      */
     constructor(
         uint _maxMint,
+        uint _maxMintWalletLimit,
         string memory _baseTokenURI,
         bool _whitelistMintStatus,
-        bytes32 _merkleroot
+        bytes32 _whitelist1Root,
+        bytes32 _whitelist2Root
     ) ERC721A("BalancePass", "BALANCE-PASS") {
         maxMint = _maxMint;
+        maxMintWalletLimit = _maxMintWalletLimit;
         baseTokenURI = _baseTokenURI;
         whitelistMintStatus = _whitelistMintStatus;
-        merkleroot = _merkleroot;
+        whitelist1Root = _whitelist1Root;
+        whitelist2Root = _whitelist2Root;
     }
 
     /* ================ POLICY FUNCTIONS ================= */
     /**
-@notice Set the baseTokenURI
+    @notice Set the baseTokenURI
+        @param _baseTokenURI to set
     */
-    /// @param _baseTokenURI to set
     function setBaseURI(string memory _baseTokenURI) external onlyOwner {
         baseTokenURI = _baseTokenURI;
     }
 
     /**
-@notice set Max mint for nft
+    @notice set Max mint for nft
         @param _max uint256
      */
-    function setMaxMint(uint _max) external onlyOwner {
+    function setMaxMint(uint256 _max) external onlyOwner {
         maxMint = _max;
     }
 
     /**
-@notice set token types of token ID
+    @notice set max per wallet limit
+        @param _maxMintWalletLimit uint
+     */ 
+    function setMaxMintWalletLimit(uint _maxMintWalletLimit) external onlyOwner {
+        maxMintWalletLimit = _maxMintWalletLimit;
+    }
+
+    /**
+    @notice set token types of token ID
         @param _tokenIdInfo uint256 2d array 
         @param _tokenType uint8 0: Platinum 1: Silver 2: Gold
      */
@@ -73,7 +88,29 @@ contract BalancePass is ERC721AQueryable, Ownable {
     }
 
     /**
-@notice set mintstatus  true: whitelistmint false: public mint
+    @notice set merkle root for initial whitelist
+        @param _merkleroot bytes32 merkle root for primary whitelist
+     */
+    function setWhitelist1Root(bytes32 _merkleroot)
+    external
+    onlyOwner
+    {
+        whitelist1Root = _merkleroot;
+    }
+
+    /**
+    @notice set merkle root for secondary whitelist
+        @param _merkleroot bytes32 merkle root for primary whitelist
+     */
+    function setWhitelist2Root(bytes32 _merkleroot)
+    external
+    onlyOwner
+    {
+        whitelist2Root = _merkleroot;
+    }
+
+    /**
+    @notice set mintstatus  true: whitelistmint false: public mint
         @param status bool
      */
     function setWhitelistMintStatus(bool status) external onlyOwner {
@@ -83,7 +120,7 @@ contract BalancePass is ERC721AQueryable, Ownable {
     /* =============== USER FUNCTIONS ==================== */
 
     /**
-@notice mint whitelist user
+    @notice mint whitelist user
         @param _merkleProof merkle proof array
         @return tokenId uint256
      */
@@ -94,26 +131,26 @@ contract BalancePass is ERC721AQueryable, Ownable {
     {
         require(whitelistMintStatus, "Not whitelist mint");
         require(totalSupply() <= maxMint, "BalancePass: Max limit reached");
-        require(!whitelistClaimed[msg.sender], "BalancePass: Already claimed");
+        require(mintWalletLimit[msg.sender] + 1 <= maxMintWalletLimit, "BalancePass: Max wallet limit reached");
         
         // verify against merkle root
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
-        require(MerkleProof.verify(_merkleProof, merkleroot, leaf), "BalancePass: Invalid proof");
+        require(MerkleProof.verify(_merkleProof, whitelist1Root, leaf), "BalancePass: Invalid proof");
 
         require(totalSupply() < maxMint, "BalancePass: Max limit reached");
         uint256 tokenId = _nextTokenId();
 
         //mint balancepass nft
-        whitelistClaimed[msg.sender] = true;
-        _mint(msg.sender, 1);
 
+        _mint(msg.sender, 1);
+        mintWalletLimit[msg.sender] += 1;
         emit NftMinted(msg.sender, tokenId);
 
         return tokenId;
     }
 
     /**
-@notice mint whitelist user
+    @notice mint whitelist user
         @param _user address
         @return tokenId uint256
      */
@@ -145,9 +182,9 @@ contract BalancePass is ERC721AQueryable, Ownable {
     }
 
     /**
-@notice return tokenURI of specific token ID
-     @param tokenId uint256
-     @return // string
+    @notice return tokenURI of specific token ID
+        @param tokenId uint256
+        @return // string
      */
     function tokenURI(uint256 tokenId)
     public
@@ -165,7 +202,7 @@ contract BalancePass is ERC721AQueryable, Ownable {
     }
 
     /**
-@notice return tokenTypes based on tokenId
+    @notice return tokenTypes based on tokenId
         @param _tokenId uint256
         @return // string
      */
@@ -182,7 +219,9 @@ contract BalancePass is ERC721AQueryable, Ownable {
         return "Undefined";
     }
 
-    /// @notice current Token ID
+    /**
+    @notice current Token ID
+    */
     function currentTokenId() external view returns (uint256) {
         return _nextTokenId();
     }
