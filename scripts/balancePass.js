@@ -8,6 +8,7 @@ async function main() {
   const network = "mainnet";
 
   const maxMint = 350;
+  const maxMintWalletLimit = 1;
   const baseTokenURI = "ipfs://Qmc8A19qUxy1VWeSDtJj9cGk1DAfE88E47Xb5BFn5Z6Hg1";
   const merklkeRoot = "0x61ca13fc57a55588b6feda07538f2a1a514c62fbc0ab534fb5a77214ca1df545";
   const passNFT = await ethers.getContractFactory("BalancePass");
