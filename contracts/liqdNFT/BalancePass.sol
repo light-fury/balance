@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
+/// @notice Balance Alpha Pass NFT
 /// Mint limits:
 /// - there is limit 1 NFT per wallet
 /// - using multiple wallets in same transaction through your SC is forbidden, so tx.origin should be direct msg.sender
@@ -21,7 +22,8 @@ contract BalancePass is ERC721AQueryable, Ownable {
 
     uint public maxMint;
     uint public maxMintWalletLimit;
-    uint public whitelistMintStartTimestamp;
+    uint public whitelist1MintStartTimestamp;
+    uint public whitelist2MintStartTimestamp;
     uint public publicMintStartTimestamp;
     bytes32 private whitelist1Root;
     bytes32 private whitelist2Root;
@@ -36,11 +38,13 @@ contract BalancePass is ERC721AQueryable, Ownable {
     event NftMinted(address indexed _user, uint _tokenId);
 
     /**
-     @notice one time initialize for the Pass Nonfungible Token
-     @param _maxMint  uint256 the max number of mints on this chain
+        @notice one time initialize for the Pass Nonfungible Token
+        @param _maxMint  uint256 the max number of mints on this chain
         @param _maxMintWalletLimit  uint256 the max number of mints per wallet
         @param _baseTokenURI string token metadata URI
-        @param _whitelistMintStatus boolean if the whitelist only is active
+        @param _whitelist1MintStartTimestamp primary WL timestamp
+        @param _whitelist2MintStartTimestamp secondary WL timestamp
+        @param _publicMintStartTimestamp public mint timestamp
         @param _whitelist1Root bytes32 merkle root for whitelist
         @param _whitelist2Root bytes32 merkle root for whitelist
      */
@@ -48,7 +52,8 @@ contract BalancePass is ERC721AQueryable, Ownable {
         uint _maxMint,
         uint _maxMintWalletLimit,
         string memory _baseTokenURI,
-        uint _whitelistMintStartTimestamp,
+        uint _whitelist1MintStartTimestamp,
+        uint _whitelist2MintStartTimestamp,
         uint _publicMintStartTimestamp,
         bytes32 _whitelist1Root,
         bytes32 _whitelist2Root
@@ -56,7 +61,8 @@ contract BalancePass is ERC721AQueryable, Ownable {
         maxMint = _maxMint;
         maxMintWalletLimit = _maxMintWalletLimit;
         baseTokenURI = _baseTokenURI;
-        whitelistMintStartTimestamp = _whitelistMintStartTimestamp;
+        whitelist1MintStartTimestamp = _whitelist1MintStartTimestamp;
+        whitelist2MintStartTimestamp = _whitelist2MintStartTimestamp;
         publicMintStartTimestamp = _publicMintStartTimestamp;
         whitelist1Root = _whitelist1Root;
         whitelist2Root = _whitelist2Root;
@@ -80,10 +86,16 @@ contract BalancePass is ERC721AQueryable, Ownable {
         maxMintWalletLimit = _maxMintWalletLimit;
     }
 
-    /// @notice set unix timestamp when WL mint starts
-    /// @param _whitelistMintStartTimestamp unix time in seconds
-    function setWhitelistMintStartTimestamp(uint _whitelistMintStartTimestamp) external onlyOwner {
-        whitelistMintStartTimestamp = _whitelistMintStartTimestamp;
+    /// @notice set unix timestamp when primary WL mint starts
+    /// @param _whitelist1MintStartTimestamp unix time in seconds
+    function setWhitelist1MintStartTimestamp(uint _whitelist1MintStartTimestamp) external onlyOwner {
+        whitelist1MintStartTimestamp = _whitelist1MintStartTimestamp;
+    }
+
+    /// @notice set unix timestamp when secondary WL mint starts
+    /// @param _whitelist2MintStartTimestamp unix time in seconds
+    function setWhitelist2MintStartTimestamp(uint _whitelist2MintStartTimestamp) external onlyOwner {
+        whitelist2MintStartTimestamp = _whitelist2MintStartTimestamp;
     }
 
     /// @notice set unix timestamp when public mint starts
@@ -103,37 +115,43 @@ contract BalancePass is ERC721AQueryable, Ownable {
 
     /**
         @notice set merkle root for initial whitelist
-        @param _merkleroot bytes32 merkle root for primary whitelist
+        @param _whitelist1Root bytes32 merkle root for primary whitelist
      */
-    function setWhitelist1Root(bytes32 _merkleroot)
-    external
-    onlyOwner
-    {
-        whitelist1Root = _merkleroot;
+    function setWhitelist1Root(bytes32 _whitelist1Root) external onlyOwner {
+        whitelist1Root = _whitelist1Root;
     }
 
     /**
         @notice set merkle root for secondary whitelist
-        @param _merkleroot bytes32 merkle root for primary whitelist
+        @param _whitelist2Root bytes32 merkle root for secondary whitelist
      */
-    function setWhitelist2Root(bytes32 _merkleroot)
-    external
-    onlyOwner
-    {
-        whitelist2Root = _merkleroot;
+    function setWhitelist2Root(bytes32 _whitelist2Root) external onlyOwner {
+        whitelist2Root = _whitelist2Root;
     }
 
     /* =============== USER FUNCTIONS ==================== */
 
 
-    /// @notice WL mint
+    /// @notice primary WL mint
     /// @param _merkleProof merkle proof array
-    function mint_whitelist(bytes32[] calldata _merkleProof) external payable returns (uint) {
-        require(block.timestamp >= whitelistMintStartTimestamp && block.timestamp <= publicMintStartTimestamp, "WHITELIST_MINT_DIDNT_START");
+    function mint_whitelist1(bytes32[] calldata _merkleProof) external payable returns (uint) {
+        require(block.timestamp >= whitelist1MintStartTimestamp && block.timestamp <= whitelist2MintStartTimestamp, "WHITELIST1_MINT_DIDNT_START");
 
         // verify against merkle root
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
         require(MerkleProof.verify(_merkleProof, whitelist1Root, leaf), "BalancePass: Invalid proof");
+
+        return doMint(true);
+    }
+
+    /// @notice secondary WL mint
+    /// @param _merkleProof merkle proof array
+    function mint_whitelist2(bytes32[] calldata _merkleProof) external payable returns (uint) {
+        require(block.timestamp >= whitelist2MintStartTimestamp && block.timestamp <= publicMintStartTimestamp, "WHITELIST2_MINT_DIDNT_START");
+
+        // verify against merkle root
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
+        require(MerkleProof.verify(_merkleProof, whitelist2Root, leaf), "BalancePass: Invalid proof");
 
         return doMint(true);
     }
