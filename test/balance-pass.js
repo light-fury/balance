@@ -150,7 +150,7 @@ describe("Token contract", function () {
   });
 
   // additional tests to write
-  // ERC721a
+  // ERC721a: https://github.com/chiru-labs/ERC721A/blob/main/contracts/IERC721A.sol
   // totalsupply
   // supportsInterface
   // balanceOf
@@ -160,7 +160,7 @@ describe("Token contract", function () {
   // getApprove
   // isApprovedForAll
   
-  // ERC721aQueryable
+  // ERC721aQueryable: https://github.com/chiru-labs/ERC721A/blob/main/contracts/extensions/IERC721AQueryable.sol
   // explicitOwnershipOf
   // explicitOwnershipsOf
   // tokensOfOwnerIn
