@@ -13,7 +13,7 @@ import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 /// Mint limits:
 /// - there is limit 1 NFT per wallet
 /// - using multiple wallets in same transaction through your SC is forbidden, so tx.origin should be direct msg.sender
-/// - WL mint (and public mint if hard cap was not reached) will start at specific unix time of block
+/// - primary and secondary WL mints (and public mint if hard cap was not reached) will start at specific unix time of block
 contract BalancePass is ERC721AQueryable, Ownable {
 
     using SafeERC20 for IERC20;
