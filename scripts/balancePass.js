@@ -15,8 +15,8 @@ async function main() {
   const whitelist2MintStartTimestamp = whitelist1MintStartTimestamp + 10 * 60;
   const publicMintStartTimestamp = whitelist2MintStartTimestamp + 20 * 60;
 
-  const merklke1Root = "0x61ca13fc57a55588b6feda07538f2a1a514c62fbc0ab534fb5a77214ca1df545";
-  const merklke2Root = merklke1Root; // FIXME
+  const merklke1Root = "0xa9ca40c422a97623e2893d4152da06227e0b64f582709e006db002d18f26caa8"; 
+  const merklke2Root = "0x6c9710774f2ec99fd199d32151abd15f55cbf464aad2b8a9fc40faa079afcad6"; // FIXME
 
   // balance pass unrevealed metas
   const baseTokenURI = "ipfs://QmPHtTskxyEmR3yXGYdwZQWpo2Kfx27GUTqAdtDJNwyarP";
@@ -28,7 +28,7 @@ async function main() {
 
   console.log(
     `\nVerify:\nnpx hardhat verify --network ${network} ` +
-      `${passnft.address} "${maxMint}" "${baseTokenURI}"`
+      `${passnft.address} "${maxMint}" "${maxMintWalletLimit}" "${baseTokenURI}" "${whitelist1MintStartTimestamp}" "${whitelist2MintStartTimestamp}" "${publicMintStartTimestamp}" "${merklke1Root}" "${merklke2Root}"`
   );
 }
 
