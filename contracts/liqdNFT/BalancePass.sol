@@ -125,33 +125,25 @@ contract BalancePass is ERC721AQueryable, Ownable {
     /// business logic
     ///
 
-    /// @notice primary WL mint
-    /// @param _merkleProof merkle proof array
-    function mint_whitelist1(bytes32[] calldata _merkleProof) external payable returns (uint) {
-        require(block.timestamp >= whitelist1MintStartTimestamp && block.timestamp <= whitelist2MintStartTimestamp, "WHITELIST1_MINT_DIDNT_START");
-
-        // verify against merkle root
+    /// @notice generic mint function, if _merkleProof1 is != null its WL1, if _merkleProof2 != null its WL2, otherwise its public mint
+    /// @param _merkleProof1 merkle proof array for WL1
+    /// @param _merkleProof2 merkle proof array for WL2
+    function mint(bytes32[] calldata _merkleProof1, bytes32[] calldata _merkleProof2) external payable returns (uint) {
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
-        require(MerkleProof.verify(_merkleProof, whitelist1Root, leaf), "BalancePass: Invalid proof");
 
-        return doMint(true);
-    }
+        if (_merkleProof1.length > 0) {
+            require(block.timestamp >= whitelist1MintStartTimestamp && block.timestamp <= whitelist2MintStartTimestamp, "WHITELIST1_MINT_DIDNT_START");
 
-    /// @notice secondary WL mint
-    /// @param _merkleProof merkle proof array
-    function mint_whitelist2(bytes32[] calldata _merkleProof) external payable returns (uint) {
-        require(block.timestamp >= whitelist2MintStartTimestamp && block.timestamp <= publicMintStartTimestamp, "WHITELIST2_MINT_DIDNT_START");
+            // verify against merkle root
+            require(MerkleProof.verify(_merkleProof1, whitelist1Root, leaf), "BalancePass: Invalid proof");
+        } else if (_merkleProof2.length > 0) {
+            require(block.timestamp >= whitelist2MintStartTimestamp && block.timestamp <= publicMintStartTimestamp, "WHITELIST2_MINT_DIDNT_START");
 
-        // verify against merkle root
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
-        require(MerkleProof.verify(_merkleProof, whitelist2Root, leaf), "BalancePass: Invalid proof");
-
-        return doMint(true);
-    }
-
-    /// @notice public mint
-    function mint_public() external payable returns (uint) {
-        require(block.timestamp >= publicMintStartTimestamp, "PUBLIC_MINT_DIDNT_START");
+            // verify against merkle root
+            require(MerkleProof.verify(_merkleProof2, whitelist2Root, leaf), "BalancePass: Invalid proof");
+        } else {
+            require(block.timestamp >= publicMintStartTimestamp, "PUBLIC_MINT_DIDNT_START");
+        }
 
         return doMint(true);
     }

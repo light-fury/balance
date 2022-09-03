@@ -46,17 +46,17 @@ describe("Token contract", function () {
   it("Cannot mint wl1 in time 0", async function () {
     const merkleTree = getMerkleTree([owner.address, nonOwner.address, inRoot.address]);
     const proof1 = getProof(owner.address, merkleTree);
-    await expect(passNft.mint_whitelist1(proof1)).to.be.revertedWith("WHITELIST1_MINT_DIDNT_START");
+    await expect(passNft.mint(proof1, [])).to.be.revertedWith("WHITELIST1_MINT_DIDNT_START");
   });
 
   it("Cannot mint wl2 in time 0", async function () {
     const merkleTree = getMerkleTree([owner.address, nonOwner.address, inRoot.address]);
-    const proof1 = getProof(owner.address, merkleTree);
-    await expect(passNft.mint_whitelist2(proof1)).to.be.revertedWith("WHITELIST2_MINT_DIDNT_START");
+    const proof2 = getProof(owner.address, merkleTree);
+    await expect(passNft.mint([], proof2)).to.be.revertedWith("WHITELIST2_MINT_DIDNT_START");
   });
 
   it("Cannot mint public in time 0", async function () {
-    await expect(passNft.mint_public()).to.be.revertedWith("PUBLIC_MINT_DIDNT_START");
+    await expect(passNft.mint([],[])).to.be.revertedWith("PUBLIC_MINT_DIDNT_START");
   });
 
   it("Validate primary whitelist can mint", async function () {
@@ -65,7 +65,7 @@ describe("Token contract", function () {
 
     const merkleTree = getMerkleTree([owner.address, nonOwner.address, inRoot.address]);
     const proof1 = getProof(owner.address, merkleTree);
-    await passNft.mint_whitelist1(proof1);
+    await passNft.mint(proof1, []);
     const walletOfOwner = await passNft.tokensOfOwner(owner.address);
     expect(walletOfOwner[walletOfOwner.length - 1].toNumber()).to.equal(0);
   });
@@ -74,17 +74,17 @@ describe("Token contract", function () {
   it("Should only be allowed to mint 1 in wl1", async function () {
     const merkleTree = getMerkleTree([owner.address, nonOwner.address, inRoot.address]);
     const proof1 = getProof(owner.address, merkleTree)
-    await expect(passNft.mint_whitelist1(proof1)).to.be.revertedWith("MAX_WALLET_LIMIT_REACHED");
+    await expect(passNft.mint(proof1, [])).to.be.revertedWith("MAX_WALLET_LIMIT_REACHED");
   });
 
   it("Cannot mint wl2 in time wl1", async function () {
     const merkleTree = getMerkleTree([owner.address, nonOwner.address, inRoot.address]);
-    const proof1 = getProof(owner.address, merkleTree);
-    await expect(passNft.mint_whitelist2(proof1)).to.be.revertedWith("WHITELIST2_MINT_DIDNT_START");
+    const proof2 = getProof(owner.address, merkleTree);
+    await expect(passNft.mint([], proof2)).to.be.revertedWith("WHITELIST2_MINT_DIDNT_START");
   });
 
   it("Cannot mint public in time wl1", async function () {
-    await expect(passNft.mint_public()).to.be.revertedWith("PUBLIC_MINT_DIDNT_START");
+    await expect(passNft.mint([],[])).to.be.revertedWith("PUBLIC_MINT_DIDNT_START");
   });
 
   it("Validate secondary whitelist can mint", async function () {
@@ -93,7 +93,7 @@ describe("Token contract", function () {
 
     const merkleTree = getMerkleTree([owner.address, nonOwner.address, inRoot.address]);
     const proof2 = getProof(nonOwner.address, merkleTree);
-    await passNft.connect(nonOwner).mint_whitelist2(proof2);
+    await passNft.connect(nonOwner).mint([], proof2);
     const walletOfNonOwner = await passNft.tokensOfOwner(nonOwner.address);
     expect(walletOfNonOwner[walletOfNonOwner.length - 1].toNumber()).to.equal(1);
   });
@@ -101,42 +101,42 @@ describe("Token contract", function () {
   it("Cannot mint wl1 in time wl2", async function () {
     const merkleTree = getMerkleTree([owner.address, nonOwner.address, inRoot.address]);
     const proof1 = getProof(owner.address, merkleTree);
-    await expect(passNft.mint_whitelist1(proof1)).to.be.revertedWith("WHITELIST1_MINT_DIDNT_START");
+    await expect(passNft.mint(proof1, [])).to.be.revertedWith("WHITELIST1_MINT_DIDNT_START");
   });
 
   it("Cannot mint public in time wl2", async function () {
-    await expect(passNft.mint_public()).to.be.revertedWith("PUBLIC_MINT_DIDNT_START");
+    await expect(passNft.mint([], [])).to.be.revertedWith("PUBLIC_MINT_DIDNT_START");
   });
 
   it("Should only be allowed to mint 1 in wl2", async function () {
     const merkleTree = getMerkleTree([owner.address, nonOwner.address, inRoot.address]);
     const proof2 = getProof(nonOwner.address, merkleTree)
-    await expect(passNft.connect(nonOwner).mint_whitelist2(proof2)).to.be.revertedWith("MAX_WALLET_LIMIT_REACHED");
+    await expect(passNft.connect(nonOwner).mint([], proof2)).to.be.revertedWith("MAX_WALLET_LIMIT_REACHED");
   });
 
   it("Validate any user can mint", async function () {
     // move time to wl2
     await ethers.provider.send('evm_increaseTime', [2 * 60 * 60]);
 
-    await passNft.connect(inRoot).mint_public();
+    await passNft.connect(inRoot).mint([], []);
     const walletOfInRoot = await passNft.tokensOfOwner(inRoot.address);
     expect(walletOfInRoot[walletOfInRoot.length - 1].toNumber()).to.equal(2);
   });
 
   it("Should only be allowed to mint 1 in public", async function () {
-    await expect(passNft.connect(inRoot).mint_public()).to.be.revertedWith("MAX_WALLET_LIMIT_REACHED");
+    await expect(passNft.connect(inRoot).mint([], [])).to.be.revertedWith("MAX_WALLET_LIMIT_REACHED");
   });
 
   it("Cannot mint wl1 in time public", async function () {
     const merkleTree = getMerkleTree([owner.address, nonOwner.address, inRoot.address]);
     const proof1 = getProof(owner.address, merkleTree);
-    await expect(passNft.mint_whitelist1(proof1)).to.be.revertedWith("WHITELIST1_MINT_DIDNT_START");
+    await expect(passNft.mint(proof1, [])).to.be.revertedWith("WHITELIST1_MINT_DIDNT_START");
   });
 
   it("Cannot mint wl2 in time public", async function () {
     const merkleTree = getMerkleTree([owner.address, nonOwner.address, inRoot.address]);
-    const proof1 = getProof(owner.address, merkleTree);
-    await expect(passNft.mint_whitelist2(proof1)).to.be.revertedWith("WHITELIST2_MINT_DIDNT_START");
+    const proof2 = getProof(owner.address, merkleTree);
+    await expect(passNft.mint([], proof2)).to.be.revertedWith("WHITELIST2_MINT_DIDNT_START");
   });
 
   ///
