@@ -15,8 +15,8 @@ async function main() {
   const whitelist2MintStartTimestamp = whitelist1MintStartTimestamp + 10 * 60;
   const publicMintStartTimestamp = whitelist2MintStartTimestamp + 20 * 60;
 
-  const merklke1Root = "0xa9ca40c422a97623e2893d4152da06227e0b64f582709e006db002d18f26caa8"; 
-  const merklke2Root = "0x6c9710774f2ec99fd199d32151abd15f55cbf464aad2b8a9fc40faa079afcad6"; // FIXME
+  const merklke1Root = "0x1b884ee93096fd286f2cd284508b72dcd747a62e09a0aca80bb4dd783606f67d"; 
+  const merklke2Root = "0x1bc5865dcee5e3b1a0cb77568d6e324cff399d2c1fa32543386e5aa2cd2d0948";
 
   // balance pass unrevealed metas
   const baseTokenURI = "ipfs://QmPHtTskxyEmR3yXGYdwZQWpo2Kfx27GUTqAdtDJNwyarP";
