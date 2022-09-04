@@ -132,12 +132,12 @@ contract BalancePass is ERC721AQueryable, Ownable {
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
 
         if (_merkleProof1.length > 0) {
-            require(block.timestamp >= whitelist1MintStartTimestamp && block.timestamp <= whitelist2MintStartTimestamp, "WHITELIST1_MINT_DIDNT_START");
+            require(block.timestamp >= whitelist1MintStartTimestamp, "WHITELIST1_MINT_DIDNT_START");
 
             // verify against merkle root
             require(MerkleProof.verify(_merkleProof1, whitelist1Root, leaf), "BalancePass: Invalid proof");
         } else if (_merkleProof2.length > 0) {
-            require(block.timestamp >= whitelist2MintStartTimestamp && block.timestamp <= publicMintStartTimestamp, "WHITELIST2_MINT_DIDNT_START");
+            require(block.timestamp >= whitelist2MintStartTimestamp, "WHITELIST2_MINT_DIDNT_START");
 
             // verify against merkle root
             require(MerkleProof.verify(_merkleProof2, whitelist2Root, leaf), "BalancePass: Invalid proof");
