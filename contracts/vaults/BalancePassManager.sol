@@ -39,29 +39,29 @@ contract OnChainBalancePassHolderStrategy is BalancePassHolderStrategy {
 
     /// @notice return balance pass holder class
     /// @param _user user
-    /// @return balance pass holder class, 'Undefined', 'Platinum', 'Silver', 'Gold'
+    /// @return balance pass holder class, 'Undefined', 'Genesis', 'Gold', 'Platinum'
     function getTokenType(address _user) external view returns (string memory) {
         uint[] memory tokens = balancePassNft.tokensOfOwner(_user);
         if (tokens.length == 0) return "Undefined";
 
-        bool goldFound = false;
-        bool silverFound = false;
         bool platinumFound = false;
+        bool goldFound = false;
+        bool genesisFound = false;
         for (uint i = 0; i < tokens.length; i++) {
             string memory result = balancePassNft.getTokenType(tokens[i]);
-            if (hash(result) == hash("Gold")) {
-                goldFound = true;
+            if (hash(result) == hash("Platinum")) {
+                platinumFound = true;
                 // we can skip as we found the best
                 break;
             }
-            else if (hash(result) == hash("Silver")) silverFound = true;
-            else if (hash(result) == hash("Platinum")) platinumFound = true;
+            else if (hash(result) == hash("Gold")) goldFound = true;
+            else if (hash(result) == hash("Genesis")) genesisFound = true;
             // else undefined none of them found
         }
 
-        if (goldFound) return "Gold";
-        else if (silverFound) return "Silver";
-        else if (platinumFound) return "Platinum";
+        if (platinumFound) return "Platinum";
+        else if (goldFound) return "Gold";
+        else if (genesisFound) return "Genesis";
         return "Undefined";
     }
 
@@ -77,33 +77,56 @@ contract OffChainBalancePassHolderStrategy is BalancePassHolderStrategy, Ownable
     /// mapping for user to list of tokenIds
     mapping(address => uint[]) public tokenIdSnapshot;
     /// unmodifiable mapping between tokenId and type
-    mapping(uint => string) public tokenTypeSnapshot;
+    mapping(uint8 => uint[][]) public tokenTypeArray;
+
+    /// @notice return tokenTypes based on tokenId
+    /// @param _tokenId uint256
+    /// @return token type
+    function getTokenType(uint _tokenId) public view returns (string memory) {
+        for (uint8 i = 0; i < 3; i++) {
+            uint[][] memory temp = tokenTypeArray[i];
+            for (uint j = 0; j < temp.length; j++) {
+                if (_tokenId >= temp[j][0] && _tokenId <= temp[j][1])
+                    if (i == 2) return "Platinum";
+                    else if (i == 1) return "Gold";
+                    else return "Genesis";
+            }
+        }
+        return "Undefined";
+    }
+
+    /// @notice set token types of token ID
+    /// @param _tokenIdInfo uint256 2d array, example: [[1,10],[11,30]] which means 1 and 10 are in first interval and 11 and 30 are in second
+    /// @param _tokenType uint8 0: Genesis 1: Gold 2: Platinum
+    function setTokenType(uint[][] memory _tokenIdInfo, uint8 _tokenType) external onlyOwner {
+        tokenTypeArray[_tokenType] = _tokenIdInfo;
+    }
 
     /// @notice return balance pass holder class
     /// @param _user user
-    /// @return balance pass holder class, 'Undefined', 'Platinum', 'Silver', 'Gold'
+    /// @return balance pass holder class, 'Undefined', 'Genesis', 'Gold', 'Platinum'
     function getTokenType(address _user) external view returns (string memory) {
         uint[] memory tokens = tokenIdSnapshot[_user];
         if (tokens.length == 0) return "Undefined";
 
-        bool goldFound = false;
-        bool silverFound = false;
         bool platinumFound = false;
+        bool goldFound = false;
+        bool genesisFound = false;
         for (uint i = 0; i < tokens.length; i++) {
-            string memory result = tokenTypeSnapshot[tokens[i]];
-            if (hash(result) == hash("Gold")) {
-                goldFound = true;
+            string memory result = getTokenType(tokens[i]);
+            if (hash(result) == hash("Platinum")) {
+                platinumFound = true;
                 // we can skip as we found the best
                 break;
             }
-            else if (hash(result) == hash("Silver")) silverFound = true;
-            else if (hash(result) == hash("Platinum")) platinumFound = true;
+            else if (hash(result) == hash("Gold")) goldFound = true;
+            else if (hash(result) == hash("Genesis")) genesisFound = true;
             // else undefined none of them found
         }
 
-        if (goldFound) return "Gold";
-        else if (silverFound) return "Silver";
-        else if (platinumFound) return "Platinum";
+        if (platinumFound) return "Platinum";
+        else if (goldFound) return "Gold";
+        else if (genesisFound) return "Genesis";
         return "Undefined";
     }
 
@@ -115,26 +138,31 @@ contract OffChainBalancePassHolderStrategy is BalancePassHolderStrategy, Ownable
     /// management
     ///
 
-    function clearMappings() external onlyOwner {
-        for (uint i = users.length; i >= 0; i--) {
+    function clearMappings() public onlyOwner {
+        for (uint i = users.length - 1; i >= 0; i--) {
             address user = users[i];
-            uint[] memory tokens = tokenIdSnapshot[user];
-            for (uint j = 0; j < tokens.length; j++) {
-                delete tokenTypeSnapshot[tokens[j]];
-            }
-
             delete tokenIdSnapshot[user];
             users.pop();
         }
     }
 
-    function addMapping(address _user, uint[] calldata _tokenIds, string[] calldata _tokenTypes) external onlyOwner {
-        require(_tokenIds.length == _tokenTypes.length, "ARRAY_LENGTH_NOT_SAME");
+    function addMapping(address _user, uint[] calldata _tokenIds) public onlyOwner {
+        require(tokenIdSnapshot[_user].length == 0, "MAPPING_ALREADY_EXISTS");
 
         users.push(_user);
         tokenIdSnapshot[_user] = _tokenIds;
-        for (uint i = 0; i < _tokenTypes.length; i++) {
-            tokenTypeSnapshot[_tokenIds[i]] = _tokenTypes[i];
+    }
+
+    struct HolderSnapshot {
+        address user;
+        uint[] tokenIds;
+    }
+
+    function newMapping(HolderSnapshot[] calldata _holderSnapshots) external onlyOwner {
+        clearMappings();
+
+        for (uint i = 0; i < _holderSnapshots.length; i++) {
+            addMapping(_holderSnapshots[i].user, _holderSnapshots[i].tokenIds);
         }
     }
 
@@ -146,11 +174,11 @@ contract BalancePassManager is Ownable {
     address private strategy;
 
     /// discount in percent with 2 decimals, 10000 is 100%
+    uint public discountPlatinum;
+    /// discount in percent with 2 decimals, 10000 is 100%
     uint public discountGold;
     /// discount in percent with 2 decimals, 10000 is 100%
-    uint public discountSilver;
-    /// discount in percent with 2 decimals, 10000 is 100%
-    uint public discountPlatinum;
+    uint public discountGenesis;
 
     ///
     /// business logic
@@ -166,12 +194,12 @@ contract BalancePassManager is Ownable {
 
         // Undefined
         uint amount = 0;
-        if (hash(tokenType) == hash("Gold")) {
-            amount = _fee * discountGold / 10000;
-        } else if (hash(tokenType) == hash("Silver")) {
-            amount = _fee * discountSilver / 10000;
-        } else if (hash(tokenType) == hash("Platinum")) {
+        if (hash(tokenType) == hash("Platinum")) {
             amount = _fee * discountPlatinum / 10000;
+        } else if (hash(tokenType) == hash("Gold")) {
+            amount = _fee * discountGold / 10000;
+        } else if (hash(tokenType) == hash("Genesis")) {
+            amount = _fee * discountGenesis / 10000;
         }
 
         uint realFee = _fee - amount;
@@ -190,19 +218,19 @@ contract BalancePassManager is Ownable {
         strategy = _strategy;
     }
 
+    function setDiscountPlatinum(uint _discountPlatinum) external onlyOwner {
+        require(_discountPlatinum < 10000, "DISCOUNT_TOO_BIG");
+        discountPlatinum = _discountPlatinum;
+    }
+
     function setDiscountGold(uint _discountGold) external onlyOwner {
         require(_discountGold < 10000, "DISCOUNT_TOO_BIG");
         discountGold = _discountGold;
     }
 
-    function setDiscountSilver(uint _discountSilver) external onlyOwner {
-        require(discountSilver < 10000, "DISCOUNT_TOO_BIG");
-        discountSilver = _discountSilver;
-    }
-
-    function setDiscountPlatinum(uint _discountPlatinum) external onlyOwner {
-        require(discountPlatinum < 10000, "DISCOUNT_TOO_BIG");
-        discountPlatinum = _discountPlatinum;
+    function setDiscountGenesis(uint _discountGenesis) external onlyOwner {
+        require(_discountGenesis < 10000, "DISCOUNT_TOO_BIG");
+        discountGenesis = _discountGenesis;
     }
 
 }
