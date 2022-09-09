@@ -1,0 +1,13 @@
+{
+	"name": "Balance Pass - #341",
+	"description": "The Balance Pass is an NFT Collection with a limited supply of 350 NFTs. Each pass offers unique utility within all upcoming projects within the Balance Ecosystem and their partners. Some of the utilities include:\n\n- Discounts/no fees on Liqdnft.com our upcoming NFT lending and borrowing platform.\n   ~ Platinum NFT Passes - 0.0% fees \n   ~ Gold NFT Passes - 50% off fees \n   ~ Genesis NFT Passes - 25% off fees \n- Access to auctions and instant loans for select Nfts.\n- WL opportunities for future projects.",
+	"animation_url": "ipfs://QmQZ9Ggp4LzPU4r9VGZGF4Axt1quJuTy6XAkCEUc3hptpd/Balance_Pass_-_Gold.mp4",
+	"image": "ipfs://QmQZ9Ggp4LzPU4r9VGZGF4Axt1quJuTy6XAkCEUc3hptpd/Balance_Pass_-_Gold.gif",
+	"external_url": "https://www.balance.capital/balancepass",
+	"attributes": [
+		{
+			"trait_type": "tokenType",
+			"value": "Gold"
+		}
+	]
+}

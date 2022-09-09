@@ -22,7 +22,8 @@ async function main() {
   const merklke2Root = "0x1bc5865dcee5e3b1a0cb77568d6e324cff399d2c1fa32543386e5aa2cd2d0948";
 
   // balance pass unrevealed metas
-  const baseTokenURI = "ipfs://QmPHtTskxyEmR3yXGYdwZQWpo2Kfx27GUTqAdtDJNwyarP";
+  // const baseTokenURI = "ipfs://QmPHtTskxyEmR3yXGYdwZQWpo2Kfx27GUTqAdtDJNwyarP"; // pre-reveal
+  const baseTokenURI = "ipfs://QmTSoogm5rkR2sUaZUWj2cLcJJdzUJZrHfBNFGp9vMGLAu"; // post-reveal
   const passNFT = await ethers.getContractFactory("BalancePass");
   //const passnft = await passNFT.attach("0xD69e023bfC1408b3202c79667253B0b6b68C60c0"); // rinkeby
   //const passnft = await passNFT.attach("0x3707CFddaE348F05bAEFD42406ffBa4B74Ec8D91"); // mainnet
