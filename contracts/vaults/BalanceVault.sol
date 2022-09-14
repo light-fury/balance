@@ -277,8 +277,9 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
-    /// @notice redeem all your NFTs for given APR in usdb, can technically be redeemed before repaymentTimestamp passed
-    function redeem() external nonReentrant {
+    /// @notice redeem all your NFTs for given APR in usdb, can technically be redeemed before repaymentTimestamp passed\
+    /// @return _toRepayInRepayToken amount to be repaid in repay token decimals, _feeInRepayToken amount paid in fees in repay token decimals
+    function redeem() external nonReentrant returns (uint _toRepayInRepayToken, uint _feeInRepayToken) {
         require(redeemPrepared, "REDEEM_FUNDS_NOT_PREPARED");
 
         // get user holdings
@@ -316,15 +317,15 @@ contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // remember in history
         ERC20Upgradeable token = ERC20Upgradeable(repayToken());
-        uint toRepayInRepayToken = toRepaySameUnits / 10 ** (18 - token.decimals());
-        uint feeInRepayToken = feeSameUnits / 10 ** (18 - token.decimals());
+        _toRepayInRepayToken = toRepaySameUnits / 10 ** (18 - token.decimals());
+        _feeInRepayToken = feeSameUnits / 10 ** (18 - token.decimals());
 
-        emit Redeemed(msg.sender, tokenIds, toRepayInRepayToken, feeInRepayToken, address(token));
+        emit Redeemed(msg.sender, tokenIds, _toRepayInRepayToken, _feeInRepayToken, address(token));
 
         // and sent tokens
-        require(toRepayInRepayToken <= toRepayAmount, "REPAY_OUT_OF_BOUNDS");
-        token.safeTransfer(msg.sender, toRepayInRepayToken);
-        token.safeTransfer(manager.DAO(), feeInRepayToken);
+        require(_toRepayInRepayToken <= toRepayAmount, "REPAY_OUT_OF_BOUNDS");
+        token.safeTransfer(msg.sender, _toRepayInRepayToken);
+        token.safeTransfer(manager.DAO(), _feeInRepayToken);
     }
 
     /// @notice construct new array of tokens as a set
