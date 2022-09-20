@@ -216,7 +216,7 @@ contract BalanceVaultManager is Ownable, AccessControl, ReentrancyGuard {
     function getGeneratedVaultsPage(uint _skip, uint _limit) external view returns (BalanceVaultDto[] memory) {
         if (_skip >= generatedVaults.length) return new BalanceVaultDto[](0);
 
-        uint limit = Math.min(_limit, generatedVaults.length);
+        uint limit = Math.min(_skip + _limit, generatedVaults.length);
         BalanceVaultDto[] memory page = new BalanceVaultDto[](limit);
         uint index = 0;
         for (uint i = _skip; i < limit; i++) {
@@ -256,7 +256,7 @@ contract BalanceVaultManager is Ownable, AccessControl, ReentrancyGuard {
     function getPositionsPage(address _user, uint _skip, uint _limit) external view returns (BalanceVaultPositionDto[] memory) {
         if (_skip >= generatedVaults.length) return new BalanceVaultPositionDto[](0);
 
-        uint limit = Math.min(_limit, generatedVaults.length);
+        uint limit = Math.min(_skip + _limit, generatedVaults.length);
         BalanceVaultPositionDto[] memory page = new BalanceVaultPositionDto[](limit);
         uint index = 0;
         for (uint i = _skip; i < limit; i++) {
