@@ -37,7 +37,8 @@
     "compile": "npx hardhat compile",
     "clean": "npx hardhat clean",
     "start": "npx hardhat run scripts/deployAll.js",
-    "lint:sol": "solhint -f table contracts/**/*.sol"
+    "lint:sol": "yarn prettier --write 'contracts/**/*.sol' && solhint -f table contracts/**/*.sol",
+    "lint": "yarn prettier --write '**/*.js'"
   },
   "author": ""
 }
