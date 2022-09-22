@@ -18,8 +18,10 @@ async function main() {
   const whitelist2MintStartTimestamp = 1662404400;
   const publicMintStartTimestamp = 1662411600;
 
-  const merklke1Root = "0x1b884ee93096fd286f2cd284508b72dcd747a62e09a0aca80bb4dd783606f67d"; 
-  const merklke2Root = "0x1bc5865dcee5e3b1a0cb77568d6e324cff399d2c1fa32543386e5aa2cd2d0948";
+  const merklke1Root =
+    "0x1b884ee93096fd286f2cd284508b72dcd747a62e09a0aca80bb4dd783606f67d";
+  const merklke2Root =
+    "0x1bc5865dcee5e3b1a0cb77568d6e324cff399d2c1fa32543386e5aa2cd2d0948";
 
   // balance pass unrevealed metas
   // const baseTokenURI = "ipfs://QmPHtTskxyEmR3yXGYdwZQWpo2Kfx27GUTqAdtDJNwyarP"; // pre-reveal
@@ -27,7 +29,16 @@ async function main() {
   const passNFT = await ethers.getContractFactory("BalancePass");
   //const passnft = await passNFT.attach("0xD69e023bfC1408b3202c79667253B0b6b68C60c0"); // rinkeby
   //const passnft = await passNFT.attach("0x3707CFddaE348F05bAEFD42406ffBa4B74Ec8D91"); // mainnet
-  const passnft = await passNFT.deploy(maxMint, maxMintWalletLimit, baseTokenURI, whitelist1MintStartTimestamp, whitelist2MintStartTimestamp, publicMintStartTimestamp, merklke1Root, merklke2Root);
+  const passnft = await passNFT.deploy(
+    maxMint,
+    maxMintWalletLimit,
+    baseTokenURI,
+    whitelist1MintStartTimestamp,
+    whitelist2MintStartTimestamp,
+    publicMintStartTimestamp,
+    merklke1Root,
+    merklke2Root
+  );
   console.log(`Deployed liqdnft to: ${passnft.address}`);
 
   console.log(
