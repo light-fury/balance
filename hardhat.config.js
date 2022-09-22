@@ -1,8 +1,14 @@
 require("@nomiclabs/hardhat-waffle");
-const { alchemyApiKey, privateKey, daoPrivateKey, etherscanApiKey, alchemyApiKeyProd } = require('./secrets.json');
-require('@nomiclabs/hardhat-ethers');
+const {
+  alchemyApiKey,
+  privateKey,
+  daoPrivateKey,
+  etherscanApiKey,
+  alchemyApiKeyProd,
+} = require("./secrets.json");
+require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
-require('@openzeppelin/hardhat-upgrades');
+require("@openzeppelin/hardhat-upgrades");
 // require('@symblox/hardhat-abi-gen');
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -25,46 +31,46 @@ module.exports = {
   networks: {
     rinkeby: {
       url: `https://eth-rinkeby.alchemyapi.io/v2/${alchemyApiKey}`,
-      accounts: [`${privateKey}`]
+      accounts: [`${privateKey}`],
     },
     mainnet: {
       // url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKeyProd}`,
       url: `https://cloudflare-eth.com`,
-      accounts: [`${privateKey}`]
+      accounts: [`${privateKey}`],
     },
     bsc: {
       url: `https://bsc-dataseed.binance.org/`,
-      accounts: [`${privateKey}`]
+      accounts: [`${privateKey}`],
     },
     fantom_testnet: {
       url: `https://rpc.testnet.fantom.network/`,
-      accounts: [`${privateKey}`]
+      accounts: [`${privateKey}`],
     },
     fantom: {
       url: `https://rpc.ftm.tools/`,
-      accounts: [`${privateKey}`]
+      accounts: [`${privateKey}`],
     },
     moonriver: {
       url: `https://rpc.api.moonriver.moonbeam.network`,
       accounts: [`${privateKey}`],
-      chainId: 1285
+      chainId: 1285,
     },
     moonbase_testnet: {
       url: `https://rpc.testnet.moonbeam.network`,
       accounts: [`${privateKey}`],
-      chainId: 1287
+      chainId: 1287,
       // gas: 2100000,
       // gasPrice: 8000000000
     },
     avalanche: {
       url: `https://api.avax.network/ext/bc/C/rpc`,
       accounts: [`${privateKey}`],
-      chainId: 43114
+      chainId: 43114,
     },
     matic: {
       url: `https://rpc-mainnet.maticvigil.com`,
-      accounts: [`${privateKey}`]
-    }
+      accounts: [`${privateKey}`],
+    },
     // hardhat: {
     //   chainId: 1287
     // },
@@ -74,15 +80,15 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
-      }
-    }
+        runs: 200,
+      },
+    },
   },
   mocha: {
     timeout: 0,
   },
   etherscan: {
-    apiKey: `${etherscanApiKey}`
+    apiKey: `${etherscanApiKey}`,
   },
   // abiExporter: {
   //   path: './data/abi',
@@ -91,4 +97,3 @@ module.exports = {
   //   spacing: 2
   // }
 };
-
