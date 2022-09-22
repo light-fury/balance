@@ -86,7 +86,7 @@ describe("Token contract", function () {
 
   it("Validate primary whitelist can mint", async function () {
     // move time to wl1
-    await ethers.provider.send("evm_increaseTime", [30 * 60]);
+    await ethers.provider.send("evm_increaseTime", [30 * 60 + 1 /* to be sure */]);
 
     const merkleTree = getMerkleTree([
       owner.address,
@@ -132,7 +132,7 @@ describe("Token contract", function () {
 
   it("Validate secondary whitelist can mint", async function () {
     // move time to wl2
-    await ethers.provider.send("evm_increaseTime", [60 * 60]);
+    await ethers.provider.send("evm_increaseTime", [60 * 60 + 1 /* to be */]);
 
     const merkleTree = getMerkleTree([
       owner.address,
@@ -147,7 +147,7 @@ describe("Token contract", function () {
     );
   });
 
-  it("Cannot mint wl1 in time wl2", async function () {
+  it("Can mint wl1 in time wl2", async function () {
     const merkleTree = getMerkleTree([
       owner.address,
       nonOwner.address,
@@ -155,7 +155,7 @@ describe("Token contract", function () {
     ]);
     const proof1 = getProof(owner.address, merkleTree);
     await expect(passNft.mint(proof1, [])).to.be.revertedWith(
-      "WHITELIST1_MINT_DIDNT_START"
+      "MAX_WALLET_LIMIT_REACHED"
     );
   });
 
@@ -179,7 +179,7 @@ describe("Token contract", function () {
 
   it("Validate any user can mint", async function () {
     // move time to wl2
-    await ethers.provider.send("evm_increaseTime", [2 * 60 * 60]);
+    await ethers.provider.send("evm_increaseTime", [2 * 60 * 60 + 1 /* just to be */]);
 
     await passNft.connect(inRoot).mint([], []);
     const walletOfInRoot = await passNft.tokensOfOwner(inRoot.address);
@@ -192,7 +192,7 @@ describe("Token contract", function () {
     );
   });
 
-  it("Cannot mint wl1 in time public", async function () {
+  it("Can mint wl1 in time public", async function () {
     const merkleTree = getMerkleTree([
       owner.address,
       nonOwner.address,
@@ -200,11 +200,11 @@ describe("Token contract", function () {
     ]);
     const proof1 = getProof(owner.address, merkleTree);
     await expect(passNft.mint(proof1, [])).to.be.revertedWith(
-      "WHITELIST1_MINT_DIDNT_START"
+      "MAX_WALLET_LIMIT_REACHED"
     );
   });
 
-  it("Cannot mint wl2 in time public", async function () {
+  it("Can mint wl2 in time public", async function () {
     const merkleTree = getMerkleTree([
       owner.address,
       nonOwner.address,
@@ -212,7 +212,7 @@ describe("Token contract", function () {
     ]);
     const proof2 = getProof(owner.address, merkleTree);
     await expect(passNft.mint([], proof2)).to.be.revertedWith(
-      "WHITELIST2_MINT_DIDNT_START"
+      "MAX_WALLET_LIMIT_REACHED"
     );
   });
 
