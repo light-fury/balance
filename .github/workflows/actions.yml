@@ -1,0 +1,32 @@
+name: Run unit test of contracts
+
+on:
+  pull_request:
+  push: 
+    branches: 
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Create .env file
+        run: |
+          touch secrets.json
+          echo '{"privateKey": "0xada26d58d9cdaaede18c667cf25daf376ef926f25d734dd5062c5cab814949e4"}' >> secrets.json
+
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+
+      - name: Install dependencies
+        run: |
+          npm i
+      - name: Compile contracts
+        run: npx hardhat compile
+
+      - name: Run tests
+        run: npx hardhat test
