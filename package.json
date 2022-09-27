@@ -6,13 +6,11 @@
     "test": "test"
   },
   "dependencies": {
-    "@chainlink/contracts": "^0.5.0",
     "@openzeppelin/contracts": "^4.5.0",
     "@openzeppelin/contracts-upgradeable": "^4.5.0",
     "@openzeppelin/hardhat-upgrades": "^1.16.1",
     "@symblox/hardhat-abi-gen": "^0.2.0",
     "@types/mocha": "^9.1.1",
-    "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "erc721a": "^4.2.2",
     "erc721a-upgradeable": "^4.2.2",
