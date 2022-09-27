@@ -60,8 +60,8 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice info about user deposit
     /// @param _user caller
-    /// @param _token token CA
-    event Deposited(address indexed _user, address _token);
+    /// @param _amount deposit amount
+    event Deposited(address indexed _user, uint256 _amount);
 
     /// @notice info about premature withdraw of all user funds
     /// @param _user caller
@@ -160,15 +160,13 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /// @notice pay premium based on initialized mode
-    /// @param _token token ca
     /// @param _amount token amount
     /// @return _status latest insurance status
-    function payPremium(address _token, uint256 _amount)
+    function payPremium(uint256 _amount)
         external
         nonReentrant
         returns (PolicyStatus _status)
     {
-        require(token == _token, "TOKEN_NOT_SUPPORTED");
         require(
             status == PolicyStatus.ACTIVE || status == PolicyStatus.SUSPENDED,
             "INVALID_STATUS"
@@ -176,7 +174,7 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         (uint256 _outstanding, ) = this.checkPolicyStatus();
         uint256 _amountToTransfer = Math.min(_amount, _outstanding);
-        IERC20Upgradeable(_token).safeTransferFrom(
+        IERC20Upgradeable(token).safeTransferFrom(
             msg.sender,
             address(this),
             _amountToTransfer
@@ -186,7 +184,7 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             ? PolicyStatus.SUSPENDED
             : PolicyStatus.ACTIVE;
 
-        emit Deposited(msg.sender, _token);
+        emit Deposited(msg.sender, _amountToTransfer);
     }
 
     /// @notice after death guarantee pay beneficiaries
