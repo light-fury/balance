@@ -86,7 +86,9 @@ describe("Token contract", function () {
 
   it("Validate primary whitelist can mint", async function () {
     // move time to wl1
-    await ethers.provider.send("evm_increaseTime", [30 * 60 + 1 /* to be sure */]);
+    await ethers.provider.send("evm_increaseTime", [
+      30 * 60 + 1 /* to be sure */,
+    ]);
 
     const merkleTree = getMerkleTree([
       owner.address,
@@ -179,7 +181,9 @@ describe("Token contract", function () {
 
   it("Validate any user can mint", async function () {
     // move time to wl2
-    await ethers.provider.send("evm_increaseTime", [2 * 60 * 60 + 1 /* just to be */]);
+    await ethers.provider.send("evm_increaseTime", [
+      2 * 60 * 60 + 1 /* just to be */,
+    ]);
 
     await passNft.connect(inRoot).mint([], []);
     const walletOfInRoot = await passNft.tokensOfOwner(inRoot.address);
