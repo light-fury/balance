@@ -226,13 +226,7 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /// @notice check policy status and oustanding amount altogether
-    /// @return _outstanding outstanding amount to pay to be active
-    /// @return _status latest insurance status
-    function checkPolicyStatus()
-        external
-        view
-        returns (uint256 _outstanding, PolicyStatus _status)
-    {
+    function checkPolicyStatus() external view returns (uint256, PolicyStatus) {
         if (status == PolicyStatus.PAIDOUT || status == PolicyStatus.CANCELLED)
             return (0, status);
 
@@ -245,11 +239,15 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 BokkyPooBahsDateTimeLibrary.getMonth(block.timestamp) -
                 BokkyPooBahsDateTimeLibrary.getMonth(uint256(inceptionDate));
         }
-        _outstanding = timesToPay * premium - depositedAmount;
+        uint256 shouldPay = timesToPay * premium;
+        uint256 alreadyPaid = insuredValue + depositedAmount;
 
-        _status = _outstanding > 0
-            ? PolicyStatus.SUSPENDED
-            : PolicyStatus.ACTIVE;
+        return (
+            shouldPay - Math.min(shouldPay, alreadyPaid),
+            shouldPay > alreadyPaid
+                ? PolicyStatus.SUSPENDED
+                : PolicyStatus.ACTIVE
+        );
     }
 
     function getReadyToProceed() external onlyValidStatus {
