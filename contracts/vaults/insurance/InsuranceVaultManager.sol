@@ -151,7 +151,7 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
         vault.transferOwnership(msg.sender);
 
         generatedVaults[msg.sender].push(_vaultAddress);
-        holderAddress[_holderId] = msg.sender;
+        holderAddress[_holderId] = _vaultAddress;
 
         // remember in history
         emit VaultCreated(_holderId, msg.sender, _vaultAddress, vaultTemplate);

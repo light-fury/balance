@@ -54,6 +54,14 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     Beneficiary[] public beneficiaries;
     mapping(uint48 => uint48) public beneficiaryIndexes;
 
+    modifier onlyValidStatus() {
+        require(
+            status == PolicyStatus.ACTIVE || status == PolicyStatus.SUSPENDED,
+            "INVALID_STATUS"
+        );
+        _;
+    }
+
     ///
     /// events
     ///
@@ -165,12 +173,10 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function payPremium(uint256 _amount)
         external
         nonReentrant
+        onlyValidStatus
         returns (PolicyStatus _status)
     {
-        require(
-            status == PolicyStatus.ACTIVE || status == PolicyStatus.SUSPENDED,
-            "INVALID_STATUS"
-        );
+        require(totalPayoutFee > 0, "NO_BENEFICIARIES_ADDED");
 
         (uint256 _outstanding, ) = this.checkPolicyStatus();
         uint256 _amountToTransfer = Math.min(_amount, _outstanding);
@@ -192,13 +198,9 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function proceedInsurance()
         external
         nonReentrant
+        onlyValidStatus
         returns (PolicyStatus _status)
     {
-        require(
-            status == PolicyStatus.ACTIVE || status == PolicyStatus.SUSPENDED,
-            "INVALID_STATUS"
-        );
-
         (uint256 _outstanding, ) = this.checkPolicyStatus();
         status = _status = _outstanding > 0
             ? PolicyStatus.CANCELLED
@@ -234,15 +236,15 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         if (status == PolicyStatus.PAIDOUT || status == PolicyStatus.CANCELLED)
             return (0, status);
 
-        uint256 passedYear = BokkyPooBahsDateTimeLibrary.getYear(
+        uint256 timesToPay = BokkyPooBahsDateTimeLibrary.getYear(
             block.timestamp
         ) - BokkyPooBahsDateTimeLibrary.getYear(uint256(inceptionDate));
-        uint256 passedMonth = BokkyPooBahsDateTimeLibrary.getMonth(
-            block.timestamp
-        ) - BokkyPooBahsDateTimeLibrary.getMonth(uint256(inceptionDate));
-        uint256 timesToPay = paymentMode
-            ? passedYear * 12 + passedMonth
-            : passedYear;
+        if (paymentMode) {
+            timesToPay =
+                (timesToPay * 12) +
+                BokkyPooBahsDateTimeLibrary.getMonth(block.timestamp) -
+                BokkyPooBahsDateTimeLibrary.getMonth(uint256(inceptionDate));
+        }
         _outstanding = timesToPay * premium - depositedAmount;
 
         _status = _outstanding > 0
@@ -250,7 +252,7 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             : PolicyStatus.ACTIVE;
     }
 
-    function getReadyToProceed() external {
+    function getReadyToProceed() external onlyValidStatus {
         require(msg.sender == operator, "NOT_OPERATOR");
         readyToProceed = true;
     }
