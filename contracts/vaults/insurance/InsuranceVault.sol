@@ -207,15 +207,13 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             : PolicyStatus.PAIDOUT;
 
         if (_outstanding > 0)
-            IERC20Upgradeable(token).safeTransferFrom(
-                address(this),
+            IERC20Upgradeable(token).safeTransfer(
                 address(manager),
                 depositedAmount
             );
         else {
             for (uint256 i; i < beneficiaries.length; i += 1) {
-                IERC20Upgradeable(token).safeTransferFrom(
-                    address(this),
+                IERC20Upgradeable(token).safeTransfer(
                     beneficiaries[i].wallet,
                     (depositedAmount * beneficiaries[i].payoutFee) /
                         totalPayoutFee

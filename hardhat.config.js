@@ -29,6 +29,11 @@ task("accounts", "Prints the list of accounts", async () => {
  */
 module.exports = {
   networks: {
+    hardhat: {
+      forking: {
+        url: "https://rpc.ftm.tools/",
+      },
+    },
     rinkeby: {
       url: `https://eth-rinkeby.alchemyapi.io/v2/${alchemyApiKey}`,
       accounts: [`${privateKey}`],

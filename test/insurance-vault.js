@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { utils } = require("ethers");
 const { ethers } = require("hardhat");
 
-describe.only("Insurance Vault", function () {
+describe("Insurance Vault", function () {
   let owner, holder, beneficiary;
   let manager;
   let weth;
