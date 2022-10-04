@@ -18,24 +18,25 @@ enum PolicyStatus {
 }
 
 struct PolicyHolder {
-    uint48 holderId; // ex: 8512232569888
-    uint64 inceptionDate; // date of joining insurance
-    bool paymentMode; // true -> monthly, false -> annually
-    address token; // payment token CA
-    uint256 premium;
-    uint256 insuredValue;
+    string holderId;
     string[] holderInfos; // first name, lastName, address
+    address token; // payment token CA
+    uint256 premium; // amount to pay per cycle
+    bool paymentMode; // true -> monthly, false -> annually
+    uint256 insuredValue; // total insured value
+    uint64 inceptionDate; // date of joining insurance
     PolicyStatus status;
 }
 
 struct PolicyHolderDto {
-    uint48 holderId;
-    uint64 inceptionDate;
-    bool paymentMode;
-    address token;
-    uint256 premium;
-    uint256 insuredValue;
+    string holderId;
     string[] holderInfos;
+    address token;
+    uint256 balance;
+    uint256 premium;
+    bool paymentMode;
+    uint256 insuredValue;
+    uint64 inceptionDate;
     PolicyStatus status;
     address vaultAddress;
     uint256 index;
@@ -57,7 +58,7 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
 
     /// repository for all generated vaults
     mapping(address => address[]) public generatedVaults;
-    mapping(uint48 => address) public holderAddress;
+    mapping(string => address) public holderAddress;
 
     /// @param _WETH weth address
     /// @param _USDB usdb address
@@ -91,7 +92,7 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
     /// @param _vault CA of the vault
     /// @param _vaultTemplate vault template CA from which it was created
     event VaultCreated(
-        uint48 indexed _holderId,
+        string indexed _holderId,
         address indexed _holder,
         address indexed _vault,
         address _vaultTemplate
@@ -112,7 +113,7 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
     /// @param _status insurance status
     /// @return _vaultAddress actual address of preconfigured vault
     function createVault(
-        uint48 _holderId,
+        string calldata _holderId,
         string[] calldata _holderInfos,
         address _token,
         uint256 _premium,
@@ -175,7 +176,7 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
     /// @notice skip/limit paging on-chain impl
     /// @param _account address of account to watch
     /// @param _skip how many items from beginning to skip
-    /// @param _limit how many items to return in result which are not blacklisted
+    /// @param _limit how many items to return in result
     /// @return page of PolicyHolderDto
     function getGeneratedVaultsPage(
         address _account,
@@ -196,16 +197,17 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
             // do not send not vetted vaults to the frontend
 
             page[index++] = PolicyHolderDto({
-                vaultAddress: address(vault),
-                index: i,
                 holderId: vault.holderId(),
                 holderInfos: vault.getHolderInfos(),
                 token: vault.token(),
+                balance: vault.getTokenBalance(),
                 premium: vault.premium(),
                 paymentMode: vault.paymentMode(),
                 insuredValue: vault.insuredValue(),
                 inceptionDate: vault.inceptionDate(),
-                status: vault.status()
+                status: vault.status(),
+                vaultAddress: address(vault),
+                index: i
             });
         }
         return page;
@@ -217,7 +219,7 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
 
     /// @notice remove vault holder information
     /// @param _holderId id of privacy holder
-    function removeVaultHolder(uint48 _holderId) external onlyOwner {
+    function removeVaultHolder(string calldata _holderId) external onlyOwner {
         require(holderAddress[_holderId] != address(0), "NOT_EXISTS");
         delete holderAddress[_holderId];
     }

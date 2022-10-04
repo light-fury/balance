@@ -37,7 +37,7 @@ describe("Insurance Vault", function () {
   describe("#createVault", () => {
     it("create new vault", async () => {
       const params = [
-        8512232569888,
+        "8512232569888",
         ["Thando", "Ngowaza", "17 Pieter Straat, Bloemfontein, 9876"],
         weth.address,
         utils.parseEther("200"),
@@ -62,7 +62,7 @@ describe("Insurance Vault", function () {
 
     beforeEach(async () => {
       const params = [
-        8512232569888,
+        "8512232569888",
         ["Thando", "Ngowaza", "17 Pieter Straat, Bloemfontein, 9876"],
         weth.address,
         utils.parseEther("200"),

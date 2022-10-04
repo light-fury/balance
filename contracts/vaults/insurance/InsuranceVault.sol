@@ -10,6 +10,14 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "../../utils/BokkyPooBahsDateTimeLibrary.sol";
 import "./InsuranceVaultManager.sol";
 
+struct BeneficiaryDto {
+    string beneficiaryId;
+    string fullName;
+    address wallet;
+    uint48 payoutFee;
+    uint256 index;
+}
+
 /// @notice balance vault
 contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -21,7 +29,7 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public depositedAmount;
 
     /// id of privacy holder
-    uint48 public holderId;
+    string public holderId;
     /// first name of privacy holder
     string public firstName;
     /// last name of privacy holder
@@ -45,14 +53,15 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     bool public readyToProceed;
 
     struct Beneficiary {
-        uint48 payoutFee;
-        address wallet;
+        string beneficiaryId;
         string fullName;
+        address wallet;
+        uint48 payoutFee;
     }
     uint256 totalPayoutFee;
 
     Beneficiary[] public beneficiaries;
-    mapping(uint48 => uint48) public beneficiaryIndexes;
+    mapping(string => uint256) public beneficiaryIndexes;
 
     modifier onlyValidStatus() {
         require(
@@ -131,7 +140,7 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @param _wallets wallet array of beneficiary
     /// @param _payoutFees payout fee array to beneficiary
     function addBeneficiaries(
-        uint48[] calldata _beneficiaryIds,
+        string[] calldata _beneficiaryIds,
         string[] calldata _fullNames,
         address[] calldata _wallets,
         uint48[] calldata _payoutFees
@@ -150,17 +159,19 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                     _payoutFees[i] -
                     beneficiaries[index - 1].payoutFee;
                 beneficiaries[index - 1] = Beneficiary({
-                    payoutFee: _payoutFees[i],
+                    beneficiaryId: _beneficiaryIds[i],
+                    fullName: _fullNames[i],
                     wallet: _wallets[i],
-                    fullName: _fullNames[i]
+                    payoutFee: _payoutFees[i]
                 });
             } else {
                 totalPayoutFee += _payoutFees[i];
                 beneficiaries.push(
                     Beneficiary({
-                        payoutFee: _payoutFees[i],
+                        beneficiaryId: _beneficiaryIds[i],
+                        fullName: _fullNames[i],
                         wallet: _wallets[i],
-                        fullName: _fullNames[i]
+                        payoutFee: _payoutFees[i]
                     })
                 );
             }
@@ -246,6 +257,47 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 ? PolicyStatus.SUSPENDED
                 : PolicyStatus.ACTIVE
         );
+    }
+
+    ///
+    /// paging
+    ///
+
+    function getTokenBalance() external view returns (uint256) {
+        return IERC20Upgradeable(token).balanceOf(address(this));
+    }
+
+    /// @notice get generated vaults length for paging
+    /// @return beneficiaries vaults length for paging
+    function getBeneficiariesLength() external view returns (uint256) {
+        return beneficiaries.length;
+    }
+
+    /// @notice skip/limit paging on-chain impl
+    /// @param _skip how many items from beginning to skip
+    /// @param _limit how many items to return in result
+    /// @return page of BeneficiaryDto
+    function getBeneficiariesPage(uint256 _skip, uint256 _limit)
+        external
+        view
+        returns (BeneficiaryDto[] memory)
+    {
+        if (_skip >= beneficiaries.length) return new BeneficiaryDto[](0);
+
+        uint256 limit = Math.min(_skip + _limit, beneficiaries.length);
+        BeneficiaryDto[] memory page = new BeneficiaryDto[](limit);
+        uint256 index = 0;
+        for (uint256 i = _skip; i < limit; i++) {
+            Beneficiary memory beneficiary = beneficiaries[i];
+            page[index++] = BeneficiaryDto({
+                index: i,
+                beneficiaryId: beneficiary.beneficiaryId,
+                fullName: beneficiary.fullName,
+                wallet: beneficiary.wallet,
+                payoutFee: beneficiary.payoutFee
+            });
+        }
+        return page;
     }
 
     function getReadyToProceed() external onlyValidStatus {

@@ -13,7 +13,7 @@ describe("Balance Vault", function () {
     );
   });
 
-  it.only("", async () => {
+  it("", async () => {
     const vaults = await manager.getGeneratedVaultsPage(0, 1);
     console.log(vaults);
   });
