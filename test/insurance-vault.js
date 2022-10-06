@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { utils } = require("ethers");
 const { ethers } = require("hardhat");
 
-describe.only("Insurance Vault", function () {
+describe("Insurance Vault", function () {
   let owner, holder, beneficiary;
   let manager;
   let weth;
@@ -37,7 +37,7 @@ describe.only("Insurance Vault", function () {
   describe("#createVault", () => {
     it("create new vault", async () => {
       const params = [
-        8512232569888,
+        "8512232569888",
         ["Thando", "Ngowaza", "17 Pieter Straat, Bloemfontein, 9876"],
         weth.address,
         utils.parseEther("200"),
@@ -62,7 +62,7 @@ describe.only("Insurance Vault", function () {
 
     beforeEach(async () => {
       const params = [
-        8512232569888,
+        "8512232569888",
         ["Thando", "Ngowaza", "17 Pieter Straat, Bloemfontein, 9876"],
         weth.address,
         utils.parseEther("200"),
