@@ -34,8 +34,8 @@ module.exports = {
         url: "https://rpc.ftm.tools/",
       },
     }, */
-    rinkeby: {
-      url: `https://eth-rinkeby.alchemyapi.io/v2/${alchemyApiKey}`,
+    goerli: {
+      url: `https://eth-goerli.alchemyapi.io/v2/${alchemyApiKey}`,
       accounts: [`${privateKey}`],
     },
     mainnet: {

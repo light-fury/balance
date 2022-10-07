@@ -38,6 +38,7 @@ struct PolicyHolderDto {
     uint256 insuredValue;
     uint64 inceptionDate;
     PolicyStatus status;
+    bool readyToProceed;
     address vaultAddress;
     uint256 index;
 }
@@ -206,6 +207,7 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
                 insuredValue: vault.insuredValue(),
                 inceptionDate: vault.inceptionDate(),
                 status: vault.status(),
+                readyToProceed: vault.readyToProceed(),
                 vaultAddress: address(vault),
                 index: i
             });

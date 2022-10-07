@@ -1,16 +1,23 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  let [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with the account: " + deployer.address);
+  const network = "goerli";
+  const { daiAddress } = require(`./networks-${network}.json`);
 
-  const network = "rinkeby";
-  // const network = "fantom_testnet";
-  const {
+  const InsuranceVaultManager = await ethers.getContractFactory(
+    "InsuranceVaultManager"
+  );
+  const balanceVaultManager = await InsuranceVaultManager.deploy(
     daiAddress,
-    usdcAddress,
-    usdbAddress,
-  } = require(`./networks-${network}.json`);
+    daiAddress,
+    daiAddress
+  );
+  console.log(
+    `Deployed InsuranceVaultManager to: ${balanceVaultManager.address}`
+  );
+  console.log(
+    `Verify:\nnpx hardhat verify --network ${network} ${balanceVaultManager.address} ${daiAddress} ${daiAddress} ${daiAddress}`
+  );
 
   const InsuranceVaultTemplate = await ethers.getContractFactory(
     "InsuranceVault"
@@ -20,23 +27,10 @@ async function main() {
     `Deployed InsuranceVaultTemplate to: ${balanceVaultTemplate.address}`
   );
   console.log(
-    `\nVerify:\nnpx hardhat verify --network ${network} ${balanceVaultTemplate.address}`
+    `Verify:\nnpx hardhat verify --network ${network} ${balanceVaultTemplate.address}\n`
   );
 
-  const InsuranceVaultManager = await ethers.getContractFactory(
-    "InsuranceVaultManager"
-  );
-  const balanceVaultManager = await InsuranceVaultManager.deploy(
-    daiAddress,
-    usdbAddress,
-    usdcAddress
-  );
-  console.log(
-    `Deployed InsuranceVaultManager to: ${balanceVaultManager.address}`
-  );
-  console.log(
-    `\nVerify:\nnpx hardhat verify --network ${network} ${balanceVaultManager.address} ${daiAddress} ${usdbAddress} ${usdcAddress}`
-  );
+  await balanceVaultManager.setVaultTemplate(balanceVaultTemplate.address);
 }
 
 main()
