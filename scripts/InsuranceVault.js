@@ -2,21 +2,17 @@ const { ethers } = require("hardhat");
 
 async function main() {
   const network = "goerli";
-  const { daiAddress } = require(`./networks-${network}.json`);
+  const { usdbAddress } = require(`./networks-${network}.json`);
 
   const InsuranceVaultManager = await ethers.getContractFactory(
     "InsuranceVaultManager"
   );
-  const balanceVaultManager = await InsuranceVaultManager.deploy(
-    daiAddress,
-    daiAddress,
-    daiAddress
-  );
+  const balanceVaultManager = await InsuranceVaultManager.deploy(usdbAddress);
   console.log(
     `Deployed InsuranceVaultManager to: ${balanceVaultManager.address}`
   );
   console.log(
-    `Verify:\nnpx hardhat verify --network ${network} ${balanceVaultManager.address} ${daiAddress} ${daiAddress} ${daiAddress}`
+    `Verify:\nnpx hardhat verify --network ${network} ${balanceVaultManager.address} ${usdbAddress}`
   );
 
   const InsuranceVaultTemplate = await ethers.getContractFactory(

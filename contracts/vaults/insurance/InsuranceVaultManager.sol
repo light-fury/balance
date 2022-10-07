@@ -1,3 +1,4 @@
+// solhint-disable
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.16;
@@ -10,35 +11,34 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./InsuranceVault.sol";
 
+// Active: while alive
+// Suspended: after death, if lapse
+// PaidOut: after death, paid out
 enum PolicyStatus {
     ACTIVE,
     SUSPENDED,
-    PAIDOUT,
-    CANCELLED
+    PAIDOUT
 }
 
 struct PolicyHolder {
     string holderId;
     string[] holderInfos; // first name, lastName, address
-    address token; // payment token CA
     uint256 premium; // amount to pay per cycle
     bool paymentMode; // true -> monthly, false -> annually
     uint256 insuredValue; // total insured value
     uint64 inceptionDate; // date of joining insurance
-    PolicyStatus status;
 }
 
 struct PolicyHolderDto {
     string holderId;
     string[] holderInfos;
-    address token;
-    uint256 balance;
+    uint256 deposit;
     uint256 premium;
     bool paymentMode;
     uint256 insuredValue;
     uint64 inceptionDate;
     PolicyStatus status;
-    bool readyToProceed;
+    bool isDeathVerified;
     address vaultAddress;
     uint256 index;
 }
@@ -47,40 +47,27 @@ struct PolicyHolderDto {
 contract InsuranceVaultManager is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    address public immutable WETH;
     address public immutable USDB;
-    address public immutable USDC;
 
     address public operator;
     address public vaultTemplate;
+    uint256 public poolBalance;
 
-    /// vetted tokens
+    /// allowed tokens
     mapping(address => bool) public allowedTokens;
 
     /// repository for all generated vaults
     mapping(address => address[]) public generatedVaults;
     mapping(string => address) public holderAddress;
 
-    /// @param _WETH weth address
     /// @param _USDB usdb address
-    /// @param _USDC usdc address
-    constructor(
-        address _WETH,
-        address _USDB,
-        address _USDC
-    ) {
-        require(_WETH != address(0), "WETH_EMPTY_ADDRESS");
-        WETH = _WETH;
+    constructor(address _USDB) {
         require(_USDB != address(0), "USDB_EMPTY_ADDRESS");
         USDB = _USDB;
-        require(_USDC != address(0), "USDC_EMPTY_ADDRESS");
-        USDC = _USDC;
-
-        setAllowedToken(_WETH, true);
-        setAllowedToken(_USDB, true);
-        setAllowedToken(_USDC, true);
-
+        poolBalance = 1e24;
         operator = msg.sender;
+
+        setAllowedToken(_USDB, true);
     }
 
     ///
@@ -99,6 +86,11 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
         address _vaultTemplate
     );
 
+    /// @notice informs about paying premium
+    /// @param _holder privacy holder address
+    /// @param _amount amount totally paid
+    event PremiumPaid(address indexed _holder, uint256 _amount);
+
     ///
     /// business logic
     ///
@@ -106,29 +98,24 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
     /// @notice creates new vault
     /// @param _holderId id of privacy holder
     /// @param _holderInfos first name, lastName, and physical address
-    /// @param _token payment token CA
     /// @param _premium premium value
     /// @param _paymentMode premium payment mode
     /// @param _insuredValue total insured value
     /// @param _inceptionDate policy inception date
-    /// @param _status insurance status
     /// @return _vaultAddress actual address of preconfigured vault
     function createVault(
         string calldata _holderId,
         string[] calldata _holderInfos,
-        address _token,
         uint256 _premium,
         bool _paymentMode,
         uint256 _insuredValue,
-        uint64 _inceptionDate,
-        PolicyStatus _status
+        uint64 _inceptionDate
     ) external nonReentrant returns (address _vaultAddress) {
         require(
             holderAddress[_holderId] == address(0),
             "HOLDER_ALREADY_REGISTERED"
         );
         require(vaultTemplate != address(0), "MISSING_VAULT_TEMPLATE");
-        require(allowedTokens[_token], "TOKEN_NOT_WHITELISTED");
         require(
             _inceptionDate <= block.timestamp,
             "INCEPTION_DATE_SHOULD_BE_IN_PAST"
@@ -141,12 +128,10 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
         PolicyHolder memory param = PolicyHolder({
             holderId: _holderId,
             holderInfos: _holderInfos,
-            token: _token,
             premium: _premium,
             paymentMode: _paymentMode,
             insuredValue: _insuredValue,
-            inceptionDate: _inceptionDate,
-            status: _status
+            inceptionDate: _inceptionDate
         });
         InsuranceVault vault = InsuranceVault(_vaultAddress);
         vault.initialize(param, operator);
@@ -157,6 +142,47 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
 
         // remember in history
         emit VaultCreated(_holderId, msg.sender, _vaultAddress, vaultTemplate);
+    }
+
+    /// @notice pay all created vaults premiums to here
+    function payPremium() external nonReentrant {
+        address[] memory vaults = generatedVaults[msg.sender];
+        require(vaults.length > 0, "NO_CLIENTS");
+
+        uint256 amountToPay;
+        for (uint256 i; i < vaults.length; i += 1) {
+            if (InsuranceVault(vaults[i]).status() == PolicyStatus.ACTIVE) {
+                amountToPay += InsuranceVault(vaults[i]).premium();
+                InsuranceVault(vaults[i]).payPremium();
+            }
+        }
+        if (amountToPay > 0) {
+            IERC20(USDB).safeTransferFrom(
+                msg.sender,
+                address(this),
+                amountToPay
+            );
+            poolBalance += amountToPay;
+            emit PremiumPaid(msg.sender, amountToPay);
+        }
+    }
+
+    /// @notice proceed insurance to beneficiaries
+    function proceedInsurance() external {
+        InsuranceVault vault = InsuranceVault(msg.sender);
+        uint256 insuredVaule = vault.insuredValue();
+        uint256 totalPayoutFee = vault.totalPayoutFee();
+        poolBalance -= insuredVaule;
+        BeneficiaryDto[] memory beneficiaries = vault.getBeneficiariesPage(
+            0,
+            vault.getBeneficiariesLength()
+        );
+        for (uint256 i; i < beneficiaries.length; i += 1) {
+            IERC20(USDB).safeTransfer(
+                beneficiaries[i].wallet,
+                (insuredVaule * beneficiaries[i].payoutFee) / totalPayoutFee
+            );
+        }
     }
 
     ///
@@ -200,14 +226,13 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
             page[index++] = PolicyHolderDto({
                 holderId: vault.holderId(),
                 holderInfos: vault.getHolderInfos(),
-                token: vault.token(),
-                balance: vault.getTokenBalance(),
+                deposit: vault.depositedAmount(),
                 premium: vault.premium(),
                 paymentMode: vault.paymentMode(),
                 insuredValue: vault.insuredValue(),
                 inceptionDate: vault.inceptionDate(),
                 status: vault.status(),
-                readyToProceed: vault.readyToProceed(),
+                isDeathVerified: vault.isDeathVerified(),
                 vaultAddress: address(vault),
                 index: i
             });
@@ -218,6 +243,10 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
     ///
     /// management
     ///
+
+    function prepareVault(string memory holderId) external onlyOwner {
+        InsuranceVault(holderAddress[holderId]).prepare();
+    }
 
     /// @notice remove vault holder information
     /// @param _holderId id of privacy holder
