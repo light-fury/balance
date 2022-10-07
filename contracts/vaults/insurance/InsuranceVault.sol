@@ -212,6 +212,8 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         onlyValidStatus
         returns (PolicyStatus _status)
     {
+        require(readyToProceed, "DEATH_NOT_CONFIRMED");
+
         (uint256 _outstanding, ) = this.checkPolicyStatus();
         status = _status = _outstanding > 0
             ? PolicyStatus.CANCELLED
