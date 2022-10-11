@@ -14,7 +14,7 @@ async function main() {
   console.log(
     `Verify:\nnpx hardhat verify --network ${network} ${balanceVaultManager.address} ${usdbAddress}`
   );
-
+  /* 
   const InsuranceVaultTemplate = await ethers.getContractFactory(
     "InsuranceVault"
   );
@@ -25,8 +25,10 @@ async function main() {
   console.log(
     `Verify:\nnpx hardhat verify --network ${network} ${balanceVaultTemplate.address}\n`
   );
-
-  await balanceVaultManager.setVaultTemplate(balanceVaultTemplate.address);
+ */
+  await balanceVaultManager.setVaultTemplate(
+    "0x5d8cde6ffae84d6Abb85d7661a40d3be8f7f86DA"
+  );
 }
 
 main()

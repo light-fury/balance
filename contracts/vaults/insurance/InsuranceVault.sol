@@ -59,8 +59,6 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     PolicyStatus public status;
     /// ready to proceed insurance if death simulated in poc
     bool public isDeathVerified;
-    /// just for poc of showing death certifacte for one vault
-    bool public isRealDeath;
     /// sum of all beneficiaries payout fee
     uint256 public totalPayoutFee;
 
@@ -156,11 +154,6 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function payPremium() external {
         require(msg.sender == manager, "NOT_MANAGER");
         depositedAmount += premium;
-    }
-
-    function prepare() external {
-        require(msg.sender == manager, "NOT_MANAGER");
-        isRealDeath = true;
     }
 
     function verifyDeath() external {

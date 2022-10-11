@@ -51,7 +51,6 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
 
     address public operator;
     address public vaultTemplate;
-    uint256 public poolBalance;
 
     /// allowed tokens
     mapping(address => bool) public allowedTokens;
@@ -64,7 +63,6 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
     constructor(address _USDB) {
         require(_USDB != address(0), "USDB_EMPTY_ADDRESS");
         USDB = _USDB;
-        poolBalance = 1e24;
         operator = msg.sender;
 
         setAllowedToken(_USDB, true);
@@ -162,7 +160,6 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
                 address(this),
                 amountToPay
             );
-            poolBalance += amountToPay;
             emit PremiumPaid(msg.sender, amountToPay);
         }
     }
@@ -172,7 +169,6 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
         InsuranceVault vault = InsuranceVault(msg.sender);
         uint256 insuredVaule = vault.insuredValue();
         uint256 totalPayoutFee = vault.totalPayoutFee();
-        poolBalance -= insuredVaule;
         BeneficiaryDto[] memory beneficiaries = vault.getBeneficiariesPage(
             0,
             vault.getBeneficiariesLength()
@@ -218,10 +214,11 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
             generatedVaults[_account].length
         );
         PolicyHolderDto[] memory page = new PolicyHolderDto[](limit);
-        uint256 index = 0;
+        uint256 index;
         for (uint256 i = _skip; i < limit; i++) {
             InsuranceVault vault = InsuranceVault(generatedVaults[_account][i]);
             // do not send not vetted vaults to the frontend
+            if (holderAddress[vault.holderId()] == address(0)) continue;
 
             page[index++] = PolicyHolderDto({
                 holderId: vault.holderId(),
@@ -240,12 +237,21 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
         return page;
     }
 
+    function getPoolBalance() external view returns (uint256) {
+        return IERC20(USDB).balanceOf(address(this));
+    }
+
     ///
     /// management
     ///
 
-    function prepareVault(string memory holderId) external onlyOwner {
-        InsuranceVault(holderAddress[holderId]).prepare();
+    function reset(address account) external onlyOwner {
+        address[] memory vaults = generatedVaults[account];
+        for (uint256 i = vaults.length - 1; i >= 0; i -= 1) {
+            InsuranceVault vault = InsuranceVault(vaults[i]);
+            delete holderAddress[vault.holderId()];
+            generatedVaults[account].pop();
+        }
     }
 
     /// @notice remove vault holder information
@@ -274,5 +280,13 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
     /// @param _allow true to allow, false to disallow
     function setAllowedToken(address _token, bool _allow) public onlyOwner {
         allowedTokens[_token] = _allow;
+    }
+
+    function recoverTokens(IERC20 _token) external onlyOwner {
+        _token.safeTransfer(owner(), _token.balanceOf(address(this)));
+    }
+
+    function recoverEth() external onlyOwner {
+        payable(owner()).transfer(address(this).balance);
     }
 }
