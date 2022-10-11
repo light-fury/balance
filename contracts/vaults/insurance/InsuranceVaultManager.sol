@@ -247,6 +247,8 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
 
     function reset() external {
         address[] memory vaults = generatedVaults[msg.sender];
+        if (vaults.length == 0) return;
+
         for (uint256 i = vaults.length - 1; i >= 0; i -= 1) {
             InsuranceVault vault = InsuranceVault(vaults[i]);
             delete holderAddress[vault.holderId()];
