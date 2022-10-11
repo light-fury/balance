@@ -1,3 +1,4 @@
+// solhint-disable
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.16;
@@ -18,11 +19,18 @@ struct BeneficiaryDto {
     uint256 index;
 }
 
+struct Beneficiary {
+    string beneficiaryId;
+    string fullName;
+    address wallet;
+    uint48 payoutFee;
+}
+
 /// @notice balance vault
 contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    InsuranceVaultManager public manager;
+    address public manager;
     address public operator;
 
     /// total deposit amount via payPremium function, to separate normal transfers
@@ -37,8 +45,6 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// physical addres of privacy holder
     string public physicalAddress;
 
-    /// payment token CA
-    address public token;
     /// premium value
     uint256 public premium;
     /// premium payment mode
@@ -47,50 +53,17 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public insuredValue;
     /// policy inception date
     uint64 public inceptionDate;
+    /// vault creation date
+    uint64 public createDate;
     /// policy status
     PolicyStatus public status;
-    /// ready to proceed insurance
-    bool public readyToProceed;
-
-    struct Beneficiary {
-        string beneficiaryId;
-        string fullName;
-        address wallet;
-        uint48 payoutFee;
-    }
-    uint256 totalPayoutFee;
+    /// ready to proceed insurance if death simulated in poc
+    bool public isDeathVerified;
+    /// sum of all beneficiaries payout fee
+    uint256 public totalPayoutFee;
 
     Beneficiary[] public beneficiaries;
     mapping(string => uint256) public beneficiaryIndexes;
-
-    modifier onlyValidStatus() {
-        require(
-            status == PolicyStatus.ACTIVE || status == PolicyStatus.SUSPENDED,
-            "INVALID_STATUS"
-        );
-        _;
-    }
-
-    ///
-    /// events
-    ///
-
-    /// @notice info about user deposit
-    /// @param _user caller
-    /// @param _amount deposit amount
-    event Deposited(address indexed _user, uint256 _amount);
-
-    /// @notice info about premature withdraw of all user funds
-    /// @param _user caller
-    /// @param _amounts all amounts of all tokens
-    /// @param _tokens CAs from all previous amounts
-    /// @param _tokenIds NFT token ids burnt from given user
-    event Withdrawn(
-        address indexed _user,
-        uint256[] _amounts,
-        address[] _tokens,
-        uint256[] _tokenIds
-    );
 
     /// @notice initialize newly created vault
     /// @param _params privacy holder params
@@ -103,7 +76,7 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         __ReentrancyGuard_init();
         require(_params.holderInfos.length == 3, "INFOS_MISSING");
 
-        manager = InsuranceVaultManager(msg.sender);
+        manager = msg.sender;
         operator = _operator;
 
         holderId = _params.holderId;
@@ -111,12 +84,11 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         lastName = _params.holderInfos[1];
         physicalAddress = _params.holderInfos[2];
 
-        token = _params.token;
         premium = _params.premium;
         paymentMode = _params.paymentMode;
         insuredValue = _params.insuredValue;
         inceptionDate = _params.inceptionDate;
-        status = _params.status;
+        createDate = uint64(block.timestamp);
     }
 
     ///
@@ -178,64 +150,26 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
-    /// @notice pay premium based on initialized mode
-    /// @param _amount token amount
-    /// @return _status latest insurance status
-    function payPremium(uint256 _amount)
-        external
-        nonReentrant
-        onlyValidStatus
-        returns (PolicyStatus _status)
-    {
-        require(totalPayoutFee > 0, "NO_BENEFICIARIES_ADDED");
+    /// @notice pay premium by manager at once
+    function payPremium() external {
+        require(msg.sender == manager, "NOT_MANAGER");
+        depositedAmount += premium;
+    }
 
-        (uint256 _outstanding, ) = this.checkPolicyStatus();
-        uint256 _amountToTransfer = Math.min(_amount, _outstanding);
-        IERC20Upgradeable(token).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _amountToTransfer
-        );
-        depositedAmount += _amountToTransfer;
-        status = _status = _outstanding > _amount
-            ? PolicyStatus.SUSPENDED
-            : PolicyStatus.ACTIVE;
-
-        emit Deposited(msg.sender, _amountToTransfer);
+    function verifyDeath() external {
+        require(msg.sender == operator, "NOT_OPERATOR");
+        isDeathVerified = true;
     }
 
     /// @notice after death guarantee pay beneficiaries
-    /// @return _status latest insurance status
-    function proceedInsurance()
-        external
-        nonReentrant
-        onlyValidStatus
-        returns (PolicyStatus _status)
-    {
-        require(readyToProceed, "DEATH_NOT_CONFIRMED");
-
-        (uint256 _outstanding, ) = this.checkPolicyStatus();
-        status = _status = _outstanding > 0
-            ? PolicyStatus.CANCELLED
-            : PolicyStatus.PAIDOUT;
-
-        if (_outstanding > 0)
-            IERC20Upgradeable(token).safeTransfer(
-                address(manager),
-                depositedAmount
-            );
-        else {
-            for (uint256 i; i < beneficiaries.length; i += 1) {
-                IERC20Upgradeable(token).safeTransfer(
-                    beneficiaries[i].wallet,
-                    (depositedAmount * beneficiaries[i].payoutFee) /
-                        totalPayoutFee
-                );
-            }
-        }
-        depositedAmount = 0;
+    function proceedInsurance() external nonReentrant {
+        require(isDeathVerified, "DEATH_NOT_VERIFIED");
+        require(status == PolicyStatus.ACTIVE, "ALREADY_PROCEEDED");
+        InsuranceVaultManager(manager).proceedInsurance();
+        status = PolicyStatus.PAIDOUT;
     }
 
+    /* 
     /// @notice check policy status and oustanding amount altogether
     function checkPolicyStatus() external view returns (uint256, PolicyStatus) {
         if (status == PolicyStatus.PAIDOUT || status == PolicyStatus.CANCELLED)
@@ -243,31 +177,26 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         uint256 timesToPay = BokkyPooBahsDateTimeLibrary.getYear(
             block.timestamp
-        ) - BokkyPooBahsDateTimeLibrary.getYear(uint256(inceptionDate));
+        ) - BokkyPooBahsDateTimeLibrary.getYear(uint256(createDate));
         if (paymentMode) {
             timesToPay =
                 (timesToPay * 12) +
                 BokkyPooBahsDateTimeLibrary.getMonth(block.timestamp) -
-                BokkyPooBahsDateTimeLibrary.getMonth(uint256(inceptionDate));
+                BokkyPooBahsDateTimeLibrary.getMonth(uint256(createDate));
         }
         uint256 shouldPay = timesToPay * premium;
-        uint256 alreadyPaid = insuredValue + depositedAmount;
 
         return (
-            shouldPay - Math.min(shouldPay, alreadyPaid),
-            shouldPay > alreadyPaid
+            shouldPay - Math.min(shouldPay, depositedAmount),
+            shouldPay > depositedAmount
                 ? PolicyStatus.SUSPENDED
                 : PolicyStatus.ACTIVE
         );
     }
-
+ */
     ///
     /// paging
     ///
-
-    function getTokenBalance() external view returns (uint256) {
-        return IERC20Upgradeable(token).balanceOf(address(this));
-    }
 
     /// @notice get generated vaults length for paging
     /// @return beneficiaries vaults length for paging
@@ -300,11 +229,6 @@ contract InsuranceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             });
         }
         return page;
-    }
-
-    function getReadyToProceed() external onlyValidStatus {
-        require(msg.sender == operator, "NOT_OPERATOR");
-        readyToProceed = true;
     }
 
     function recoverTokens(IERC20Upgradeable _token) external onlyOwner {
