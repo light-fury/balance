@@ -38,5 +38,8 @@
 	"usdbNftAddress" : "0x6321Dc5a064cC702f918DDe8627420bA9CEC7B7c",
 	"generateMetadataAddress" : "0x2223574520b0E9E671688fEB7db200f8955Cc271",
 	"balanceHelperAddress" : "0x7b3530716117b7c725403b4faaf8973cf10e0d2b",
-	"ampsAddress" : "0xF8F17f3Bb48e27308F13B4d5b3D5a254182800e1"
+	"ampsAddress" : "0xF8F17f3Bb48e27308F13B4d5b3D5a254182800e1",
+	"balanceVaultTemplateAddress" : "0xc0734dd0EeF485eAB9118e3d6Ff8011bB3C141eA",
+	"balanceVaultShareTemplateAddress" : "0x4bF4a98a8A96b2270D877cA9af035715F2A128aB",
+	"balanceVaultManagerAddress" : "0x95d18604957ed8689dC3aB6BC7E2ABDCaf81A8eE"
 }

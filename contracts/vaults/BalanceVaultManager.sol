@@ -22,6 +22,7 @@ interface IBalancePassManager {
 }
 
 /// @notice Creates new balance vaults
+/// @author Balance Capital https://www.balance.capital/, pwntr0n@balance.capital
 contract BalanceVaultManager is Ownable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 

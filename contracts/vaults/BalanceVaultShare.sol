@@ -13,15 +13,13 @@ import "erc721a-upgradeable/contracts/extensions/ERC721AQueryableUpgradeable.sol
 import "./BalanceVault.sol";
 import "../utils/BokkyPooBahsDateTimeLibrary.sol";
 
-// FIXME tokenuri is failing when deposited
-// FIXME weth deposits
-
 struct AmountInfo {
     uint256[] amounts;
     address[] tokens;
 }
 
 /// @notice Share of Balance Vault
+/// @author Balance Capital https://www.balance.capital/, pwntr0n@balance.capital
 contract BalanceVaultShare is ERC721AQueryableUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

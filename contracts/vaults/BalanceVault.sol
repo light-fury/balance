@@ -27,6 +27,7 @@ struct VaultParams {
 }
 
 /// @notice balance vault
+/// @author Balance Capital https://www.balance.capital/, pwntr0n@balance.capital
 contract BalanceVault is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeERC20Upgradeable for ERC20Upgradeable;
