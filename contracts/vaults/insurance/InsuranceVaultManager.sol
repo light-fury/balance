@@ -206,17 +206,14 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
         uint256 _skip,
         uint256 _limit
     ) external view returns (PolicyHolderDto[] memory) {
-        if (_skip >= generatedVaults[_account].length)
-            return new PolicyHolderDto[](0);
+        address[] memory vaults = generatedVaults[_account];
+        if (_skip >= vaults.length) return new PolicyHolderDto[](0);
 
-        uint256 limit = Math.min(
-            _skip + _limit,
-            generatedVaults[_account].length
-        );
+        uint256 limit = Math.min(_skip + _limit, vaults.length);
         PolicyHolderDto[] memory page = new PolicyHolderDto[](limit);
         uint256 index;
         for (uint256 i = _skip; i < limit; i++) {
-            InsuranceVault vault = InsuranceVault(generatedVaults[_account][i]);
+            InsuranceVault vault = InsuranceVault(vaults[i]);
             // do not send not vetted vaults to the frontend
             if (holderAddress[vault.holderId()] == address(0)) continue;
 
@@ -249,11 +246,9 @@ contract InsuranceVaultManager is Ownable, ReentrancyGuard {
         address[] memory vaults = generatedVaults[msg.sender];
         if (vaults.length == 0) return;
 
-        for (uint256 i = vaults.length - 1; i >= 0; i -= 1) {
-            InsuranceVault vault = InsuranceVault(vaults[i]);
-            delete holderAddress[vault.holderId()];
-            generatedVaults[msg.sender].pop();
-        }
+        for (uint256 i; i < vaults.length; i += 1)
+            delete holderAddress[InsuranceVault(vaults[i]).holderId()];
+        delete generatedVaults[msg.sender];
     }
 
     /// @notice remove vault holder information
