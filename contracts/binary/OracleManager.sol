@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/binary/IOracle.sol";
 
 contract OracleManager is Ownable {
-    mapping(uint256 => IOracle) public oracles;
+    mapping(uint256 => address) public oracles;
 
-    event OracleAdded(uint256 indexed marketId, IOracle indexed oracle);
+    event OracleAdded(uint256 indexed marketId, address indexed oracle);
 
     function addOracle(uint256 marketId, address oracle) external onlyOwner {
         require(oracles[marketId] == address(0), "already added");
@@ -24,6 +24,6 @@ contract OracleManager is Ownable {
         view
         returns (uint256 timestamp, uint256 price)
     {
-        (timestamp, price) = oracles[marketId].getPrice(roundId);
+        (timestamp, price) = IOracle(oracles[marketId]).getPrice(roundId);
     }
 }
