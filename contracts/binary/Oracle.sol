@@ -3,8 +3,9 @@
 pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "../interfaces/binary/IOracle.sol";
 
-contract Oracle is AccessControl {
+contract Oracle is AccessControl, IOracle {
     struct Round {
         address writer;
         uint256 time;
@@ -53,6 +54,7 @@ contract Oracle is AccessControl {
         );
 
         Round storage newRound = rounds[roundId];
+        newRound.writer = msg.sender;
         newRound.price = price;
         newRound.time = timestamp;
 
@@ -66,13 +68,13 @@ contract Oracle is AccessControl {
      * @dev This function is only limited to WRITER_ROLE
      * @param roundId Round ID should be greater than last round id
      * @param timestamp Timestamp should be greater than last round's time, and less then current time.
-     * @param price Price of round
+     * @param price Price of round, based 1e18
      */
     function writePrice(
         uint256 roundId,
         uint256 timestamp,
         uint256 price
-    ) external onlyRole(WRITER_ROLE) {
+    ) external override onlyRole(WRITER_ROLE) {
         _writePrice(roundId, timestamp, price);
     }
 
@@ -87,7 +89,7 @@ contract Oracle is AccessControl {
         uint256[] memory roundIds,
         uint256[] memory timestamps,
         uint256[] memory prices
-    ) external onlyRole(WRITER_ROLE) {
+    ) external override onlyRole(WRITER_ROLE) {
         require(
             roundIds.length == timestamps.length &&
                 roundIds.length == prices.length,
@@ -107,6 +109,7 @@ contract Oracle is AccessControl {
     function getPrice(uint256 roundId)
         external
         view
+        override
         returns (uint256 timestamp, uint256 price)
     {
         timestamp = rounds[roundId].time;
