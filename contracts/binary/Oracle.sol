@@ -36,6 +36,12 @@ contract Oracle is Ownable, IOracle {
         _;
     }
 
+    /**
+     * @notice External function to enable/disable price writer
+     * @dev This function is only permitted to the owner
+     * @param writer Writter address to update
+     * @param enable Boolean to enable/disable writer
+     */
     function setWriter(address writer, bool enable) external onlyOwner {
         require(writer != address(0), "invalid writer");
         writers[writer] = enable;
@@ -76,7 +82,7 @@ contract Oracle is Ownable, IOracle {
 
     /**
      * @notice External function that records a new price round
-     * @dev This function is only permitted to WRITER_ROLE
+     * @dev This function is only permitted to writters
      * @param roundId Round ID should be greater than last round id
      * @param timestamp Timestamp should be greater than last round's time, and less then current time.
      * @param price Price of round, based 1e18
@@ -91,7 +97,7 @@ contract Oracle is Ownable, IOracle {
 
     /**
      * @notice External function that records a new price round
-     * @dev This function is only permitted to WRITER_ROLE
+     * @dev This function is only permitted to writters
      * @param roundIds Array of round ids
      * @param timestamps Array of timestamps
      * @param prices Array of prices
@@ -125,6 +131,6 @@ contract Oracle is Ownable, IOracle {
     {
         timestamp = rounds[roundId].time;
         price = rounds[roundId].price;
-        require(timestamp != 0, "invalid price");
+        require(timestamp != 0, "invalid round");
     }
 }

@@ -2,10 +2,9 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { expect } from "chai";
 import { utils } from "ethers";
 import { ethers } from "hardhat";
-import keccak256 from "keccak256";
 import { Oracle } from "../../typechain-types";
 
-describe("Binary Trading Oracle", () => {
+describe("Binary Option Trading - Oracle", () => {
   let owner: SignerWithAddress;
   let writer: SignerWithAddress;
 
@@ -150,6 +149,11 @@ describe("Binary Trading Oracle", () => {
       round = await oracle.getPrice(1);
       expect(round.price).to.be.equal(price);
       expect(round.timestamp).to.be.equal(time + 1);
+    })
+    it("should revert when getting price by invalid round id", async () => {
+      await expect(
+        oracle.getPrice(5)
+      ).to.be.revertedWith("invalid round");
     })
   })
 })
