@@ -2,17 +2,18 @@
 
 pragma solidity 0.8.16;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/binary/IOracle.sol";
 
-contract Oracle is AccessControl, IOracle {
+contract Oracle is Ownable, IOracle {
     struct Round {
         address writer;
         uint256 time;
         uint256 price;
     }
 
-    bytes32 public constant WRITER_ROLE = keccak256("WRITER");
+    /// @dev Writer => whitelisted
+    mapping(address => bool) public writers;
 
     /// @dev Prices by roundId
     mapping(uint256 => Round) public rounds;
@@ -20,6 +21,8 @@ contract Oracle is AccessControl, IOracle {
     /// @dev Round ID of last round, Round ID is zero-based
     uint256 public lastRoundId;
 
+    /// @dev Emit this event when updating writer status
+    event WriterUpdated(address indexed writer, bool enabled);
     /// @dev Emit this event when writing a new price round
     event WrotePrice(
         address indexed writer,
@@ -28,9 +31,15 @@ contract Oracle is AccessControl, IOracle {
         uint256 price
     );
 
-    constructor() {
-        grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setRoleAdmin(WRITER_ROLE, DEFAULT_ADMIN_ROLE);
+    modifier onlyWriter() {
+        require(writers[msg.sender], "Oracle: not writer");
+        _;
+    }
+
+    function setWriter(address writer, bool enable) external onlyOwner {
+        require(writer != address(0), "invalid writer");
+        writers[writer] = enable;
+        emit WriterUpdated(writer, enable);
     }
 
     /**
@@ -45,11 +54,13 @@ contract Oracle is AccessControl, IOracle {
         uint256 price
     ) internal {
         require(
-            lastRoundId == 0 || roundId == lastRoundId + 1,
+            rounds[lastRoundId].writer == address(0) ||
+                roundId == lastRoundId + 1,
             "invalid round"
         );
         require(
-            timestamp >= rounds[roundId].time && timestamp <= block.timestamp,
+            timestamp > rounds[lastRoundId].time &&
+                timestamp <= block.timestamp,
             "invalid time"
         );
 
@@ -65,7 +76,7 @@ contract Oracle is AccessControl, IOracle {
 
     /**
      * @notice External function that records a new price round
-     * @dev This function is only limited to WRITER_ROLE
+     * @dev This function is only permitted to WRITER_ROLE
      * @param roundId Round ID should be greater than last round id
      * @param timestamp Timestamp should be greater than last round's time, and less then current time.
      * @param price Price of round, based 1e18
@@ -74,13 +85,13 @@ contract Oracle is AccessControl, IOracle {
         uint256 roundId,
         uint256 timestamp,
         uint256 price
-    ) external override onlyRole(WRITER_ROLE) {
+    ) external override onlyWriter {
         _writePrice(roundId, timestamp, price);
     }
 
     /**
      * @notice External function that records a new price round
-     * @dev This function is only limited to WRITER_ROLE
+     * @dev This function is only permitted to WRITER_ROLE
      * @param roundIds Array of round ids
      * @param timestamps Array of timestamps
      * @param prices Array of prices
@@ -89,7 +100,7 @@ contract Oracle is AccessControl, IOracle {
         uint256[] memory roundIds,
         uint256[] memory timestamps,
         uint256[] memory prices
-    ) external override onlyRole(WRITER_ROLE) {
+    ) external override onlyWriter {
         require(
             roundIds.length == timestamps.length &&
                 roundIds.length == prices.length,
