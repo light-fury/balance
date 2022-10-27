@@ -1,10 +1,15 @@
-const { expect } = require("chai");
-const { ethers, waffle } = require("hardhat");
-const keccak256 = require("keccak256");
-const { default: MerkleTree } = require("merkletreejs");
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { expect } from "chai";
+import { ethers, waffle } from "hardhat";
+import keccak256 from "keccak256";
+import MerkleTree from "merkletreejs";
+import { BalancePass } from "../typechain-types";
 
 describe("Token contract", function () {
-  let owner, nonOwner, inRoot, notInRoot;
+  let owner: SignerWithAddress;
+  let nonOwner: SignerWithAddress;
+  let inRoot: SignerWithAddress;
+  let notInRoot: SignerWithAddress;
   const maxMint = 350;
   const maxWalletLimit = 1;
   const baseTokenURI = "ipfs://QmPHtTskxyEmR3yXGYdwZQWpo2Kfx27GUTqAdtDJNwyarP";
@@ -12,7 +17,7 @@ describe("Token contract", function () {
   const nftSymbol = "BALANCE-PASS";
 
   const provider = waffle.provider;
-  let passNft;
+  let passNft: BalancePass;
   let wl1MintTimestamp;
   let wl2MintTimestamp;
   let publicMintTimestamp;
@@ -383,7 +388,7 @@ describe("Token contract", function () {
   // tokensOfOwner
 });
 
-const getMerkleTree = (includeAddressArry) => {
+const getMerkleTree = (includeAddressArry: string[]) => {
   const whiteListAddresses = [
     "0x45fFb7aC7bC4eF4Fe1A095C71EcFc237523355e7",
     "0x1667cC75D4E52a5cCe71cDb25606Dcaf5B625264",
@@ -405,13 +410,13 @@ const getMerkleTree = (includeAddressArry) => {
   return merkleTree;
 };
 
-const getProof = (address, merkleTree) => {
+const getProof = (address: string, merkleTree: MerkleTree) => {
   const hashedAddress = keccak256(address);
   const proof = merkleTree.getHexProof(hashedAddress);
   return proof;
 };
 
-const getRootHash = (merkleTree) => {
+const getRootHash = (merkleTree: MerkleTree) => {
   const rootHash = merkleTree.getRoot();
   return `0x${rootHash.toString("hex")}`;
 };
