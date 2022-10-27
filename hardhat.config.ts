@@ -1,20 +1,26 @@
+import "@nomiclabs/hardhat-ethers";
+import "@nomiclabs/hardhat-etherscan";
+import "@nomiclabs/hardhat-waffle";
+import "@typechain/hardhat";
+import "@openzeppelin/hardhat-upgrades";
+import "hardhat-gas-reporter";
+import "solidity-coverage";
+import { HardhatUserConfig, task } from "hardhat/config";
+
 require("@nomiclabs/hardhat-waffle");
-const {
+import {
   alchemyApiKey,
   privateKey,
   daoPrivateKey,
   etherscanApiKey,
   alchemyApiKeyProd,
-} = require("./secrets.json");
-require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-etherscan");
-require("@openzeppelin/hardhat-upgrades");
+} from "./secrets.json";
 // require('@symblox/hardhat-abi-gen');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
-task("accounts", "Prints the list of accounts", async () => {
-  const accounts = await ethers.getSigners();
+task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
+  const accounts = await hre.ethers.getSigners();
 
   for (const account of accounts) {
     console.log(account.address);
@@ -27,7 +33,10 @@ task("accounts", "Prints the list of accounts", async () => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
-module.exports = {
+const config: HardhatUserConfig = {
+  typechain: {
+    target: "ethers-v5",
+  },
   networks: {
     /* hardhat: {
       forking: {
@@ -102,3 +111,5 @@ module.exports = {
   //   spacing: 2
   // }
 };
+
+export default config;
