@@ -1,4 +1,4 @@
-const { ethers } = require("hardhat");
+import { ethers } from "hardhat";
 
 async function main() {
   let [deployer] = await ethers.getSigners();
@@ -42,8 +42,8 @@ async function main() {
   // await balanceVaultManager.setVaultTemplate("0xaED0d1366b067588F70A73d96B747a03579E60B6"); // fantom
   // await balanceVaultManager.setNftTemplate("0x52F4f35A1DB7Cd7734Ad912b8f92d30627993C1E"); // fantom
 
-  console.log(`\nVerify:\nnpx hardhat verify --network ${network} `+
-      `${balanceVaultManager.address} "${daoAddress}" "${usdbAddress}" ${feeBorrower} ${feeLenderUsdb} ${feeLenderOther}`);
+  console.log(`\nVerify:\nnpx hardhat verify --network ${network} ` +
+    `${balanceVaultManager.address} "${daoAddress}" "${usdbAddress}" ${feeBorrower} ${feeLenderUsdb} ${feeLenderOther}`);
 
   // const BalancePassManager = await ethers.getContractFactory('BalancePassManager');
   // // const balancePassManager = await BalanceVaultTemplate.attach("0x0993C3f7F1ADB0af8CBcbce0fa43Db5068edA991");
