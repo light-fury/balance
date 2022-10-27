@@ -1,4 +1,4 @@
-const { ethers } = require("hardhat");
+import { ethers } from "hardhat";
 
 async function main() {
   let [deployer] = await ethers.getSigners();
@@ -43,7 +43,7 @@ async function main() {
 
   console.log(
     `\nVerify:\nnpx hardhat verify --network ${network} ` +
-      `${passnft.address} "${maxMint}" "${maxMintWalletLimit}" "${baseTokenURI}" "${whitelist1MintStartTimestamp}" "${whitelist2MintStartTimestamp}" "${publicMintStartTimestamp}" "${merklke1Root}" "${merklke2Root}"`
+    `${passnft.address} "${maxMint}" "${maxMintWalletLimit}" "${baseTokenURI}" "${whitelist1MintStartTimestamp}" "${whitelist2MintStartTimestamp}" "${publicMintStartTimestamp}" "${merklke1Root}" "${merklke2Root}"`
   );
 }
 
