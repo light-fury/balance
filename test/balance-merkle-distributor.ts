@@ -1,14 +1,19 @@
-const { expect } = require("chai");
-const { utils } = require("ethers");
-const { ethers, waffle } = require("hardhat");
-const keccak256 = require("keccak256");
-const { default: MerkleTree } = require("merkletreejs");
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { expect } from "chai";
+import { utils } from "ethers";
+import { ethers, waffle } from "hardhat";
+import keccak256 from "keccak256";
+import MerkleTree from "merkletreejs";
+import { BalanceMerkleDistributor, MockERC20 } from "../typechain-types";
 
 describe("Balance Merkle Distributor", function () {
-  let owner, setter, alice, bob;
+  let owner: SignerWithAddress;
+  let setter: SignerWithAddress;
+  let alice: SignerWithAddress;
+  let bob: SignerWithAddress;
 
-  let merkleDistributor;
-  let erc20Token;
+  let merkleDistributor: BalanceMerkleDistributor;
+  let erc20Token: MockERC20;
 
   const ETH = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 
@@ -30,7 +35,7 @@ describe("Balance Merkle Distributor", function () {
 
   describe("#setMerkleRoot", () => {
     let infos = [];
-    let merkleTree;
+    let merkleTree: MerkleTree;
 
     beforeEach(async () => {
       infos = [
@@ -66,8 +71,8 @@ describe("Balance Merkle Distributor", function () {
   });
 
   describe("#claim", () => {
-    let infos = [];
-    let merkleTree;
+    let infos: any[] = [];
+    let merkleTree: MerkleTree;
 
     beforeEach(async () => {
       infos = [
@@ -266,8 +271,8 @@ describe("Balance Merkle Distributor", function () {
   });
 
   describe("#claimInBatch", () => {
-    let infos = [];
-    let merkleTree;
+    let infos: any[] = [];
+    let merkleTree: MerkleTree;
 
     beforeEach(async () => {
       infos = [
@@ -408,7 +413,7 @@ describe("Balance Merkle Distributor", function () {
       const fee = receipt.gasUsed.mul(receipt.effectiveGasPrice);
 
       expect(
-        await owner.provider.getBalance(merkleDistributor.address)
+        await waffle.provider.getBalance(merkleDistributor.address)
       ).to.be.equal(utils.parseEther("99"));
 
       expect(await owner.getBalance()).to.be.equal(
@@ -434,7 +439,7 @@ describe("Balance Merkle Distributor", function () {
     });
   });
 
-  const getMerkleTree = (infos) => {
+  const getMerkleTree = (infos: any[]): MerkleTree => {
     const leaves = infos.map((info) =>
       keccak256(
         utils.defaultAbiCoder.encode(
