@@ -100,7 +100,7 @@ contract Market is OwnableUpgradeable, PausableUpgradeable, IMarket {
         require(isClaimable(msg.sender, positionId), "you lose this round");
 
         PositionInfo memory pos = positions[msg.sender][positionId];
-        vault.claim(pos.amount, msg.sender);
+        vault.claim(pos.amount * 2, msg.sender);
 
         // TODO: maybe remove claimed position from the positions array
 
