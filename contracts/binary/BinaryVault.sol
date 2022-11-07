@@ -25,6 +25,9 @@ contract BinaryVault is
     uint256 public vaultId;
     IERC20Upgradeable public underlyingToken;
 
+    /// @dev Whitelisted markets, only whitelisted markets can take money out from the vault.
+    mapping(address => bool) public whitelistedMarkets;
+
     /// token Id => amount, represents user share on the vault
     mapping(uint256 => uint256) stakedAmounts;
     uint256 totalStaked;
@@ -62,6 +65,20 @@ contract BinaryVault is
 
     function unpauseVault() external onlyOwner {
         _unpause();
+    }
+
+    /**
+     * @notice Whitelist market on the vault
+     * @dev Only owner can call this function
+     * @param market Market contract address
+     * @param whitelist Whitelist or Blacklist
+     */
+    function whitelistMarket(address market, bool whitelist)
+        external
+        onlyOwner
+    {
+        require(market != address(0), "invalid market");
+        whitelistedMarkets[market] = whitelist;
     }
 
     /**
@@ -132,6 +149,14 @@ contract BinaryVault is
         totalStaked += amount;
 
         emit Staked(user, tokenId, amount);
+    }
+
+    function claim(uint256 amount, address to) external {
+        require(amount > 0, "zero amount");
+        require(whitelistedMarkets[msg.sender], "not whitelisted");
+        require(to != address(0), "invalid target");
+
+        underlyingToken.safeTransfer(to, amount);
     }
 
     /**

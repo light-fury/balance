@@ -8,8 +8,8 @@ import "../interfaces/binary/IOracle.sol";
 contract Oracle is Ownable, IOracle {
     struct Round {
         address writer;
-        uint256 time;
-        uint256 price;
+        uint256 time; // starting timestamp of the round
+        uint256 price; // starting price of the round
     }
 
     /// @dev Writer => whitelisted
