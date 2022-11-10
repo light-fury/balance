@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.16;
 
-interface IMarket {
+interface IBinaryMarket {
     struct PositionInfo {
         address owner;
         bool direction;

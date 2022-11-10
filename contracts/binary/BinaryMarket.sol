@@ -6,11 +6,16 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../interfaces/binary/IMarket.sol";
-import "../interfaces/binary/IOracle.sol";
+import "../interfaces/binary/IBinaryConfig.sol";
+import "../interfaces/binary/IBinaryMarket.sol";
 import "../interfaces/binary/IBinaryVault.sol";
+import "../interfaces/binary/IOracle.sol";
 
-contract Market is OwnableUpgradeable, PausableUpgradeable, IMarket {
+contract BinaryMarket is
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    IBinaryMarket
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @dev Market Data
@@ -19,6 +24,7 @@ contract Market is OwnableUpgradeable, PausableUpgradeable, IMarket {
     uint256 public marketId;
     IOracle public oracle;
     IBinaryVault public vault;
+    IBinaryConfig public config;
 
     IERC20Upgradeable public underlyingToken;
     /// @dev Timeframes supported in this market.
@@ -31,6 +37,7 @@ contract Market is OwnableUpgradeable, PausableUpgradeable, IMarket {
     function initialize(
         IOracle oracle_,
         IBinaryVault vault_,
+        IBinaryConfig config_,
         uint256 marketId_,
         string memory pairName_,
         uint8 version_,
@@ -38,12 +45,15 @@ contract Market is OwnableUpgradeable, PausableUpgradeable, IMarket {
     ) external initializer {
         require(address(oracle_) != address(0), "invalid oracle");
         require(address(vault_) != address(0), "invalid vault");
+        require(address(config_) != address(0), "invalid config");
         require(timeframes_.length > 0, "invalid timeframes");
 
         __Ownable_init();
 
         oracle = oracle_;
         vault = vault_;
+        config = config_;
+
         pairName = pairName_;
         version = version_;
         marketId = marketId_;
@@ -100,7 +110,7 @@ contract Market is OwnableUpgradeable, PausableUpgradeable, IMarket {
         require(isClaimable(msg.sender, positionId), "you lose this round");
 
         PositionInfo memory pos = positions[msg.sender][positionId];
-        vault.claim(pos.amount * 2, msg.sender);
+        vault.claim(msg.sender, pos.amount * 2);
 
         // TODO: maybe remove claimed position from the positions array
 
@@ -118,6 +128,13 @@ contract Market is OwnableUpgradeable, PausableUpgradeable, IMarket {
         );
         // Should be claimable when the round is finished
         if (block.timestamp < timestamp + timeframes[pos.timeframeId]) {
+            return false;
+        }
+        // Should be claimable within the claim notice period
+        if (
+            block.timestamp >
+            timestamp + timeframes[pos.timeframeId] + config.claimNoticePeriod()
+        ) {
             return false;
         }
 

@@ -8,6 +8,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "erc721a-upgradeable/contracts/extensions/ERC721AQueryableUpgradeable.sol";
 
 import "../interfaces/binary/IBinaryVault.sol";
+import "../interfaces/binary/IBinaryConfig.sol";
+import "./BinaryErrors.sol";
 
 /**
  * @title Vault of Binary Option Trading
@@ -22,6 +24,8 @@ contract BinaryVault is
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    IBinaryConfig public config;
+
     uint256 public vaultId;
     IERC20Upgradeable public underlyingToken;
 
@@ -30,12 +34,17 @@ contract BinaryVault is
 
     /// token Id => amount, represents user share on the vault
     mapping(uint256 => uint256) stakedAmounts;
-    uint256 totalStaked;
+    /// Binary Players => Bet Amount
+    mapping(address => uint256) bets;
 
-    uint256 feeAccrued;
+    uint256 public watermark;
+    uint256 public totalStaked;
+    uint256 public feeAccrued;
 
-    event Staked(address user, uint256 tokenId, uint256 amount);
-    event Unstaked(address user, uint256 amount);
+    modifier onlyMarket() {
+        if (!whitelistedMarkets[msg.sender]) revert NOT_FROM_MARKET(msg.sender);
+        _;
+    }
 
     /**
      * @notice one time initialize
@@ -44,14 +53,18 @@ contract BinaryVault is
         string memory name_,
         string memory symbol_,
         uint256 vaultId_,
-        address underlyingToken_
+        address underlyingToken_,
+        address config_
     ) public initializerERC721A initializer {
         __ERC721A_init(name_, symbol_);
         __Ownable_init();
         __Pausable_init();
 
-        require(underlyingToken_ != address(0), "MISSING_VAULT");
+        if (underlyingToken_ == address(0)) revert ZERO_ADDRESS();
+        if (config_ == address(0)) revert ZERO_ADDRESS();
+
         underlyingToken = IERC20Upgradeable(underlyingToken_);
+        config = IBinaryConfig(config_);
         vaultId = vaultId_;
     }
 
@@ -147,16 +160,9 @@ contract BinaryVault is
         _mint(user, 1);
 
         totalStaked += amount;
+        watermark += amount;
 
         emit Staked(user, tokenId, amount);
-    }
-
-    function claim(uint256 amount, address to) external {
-        require(amount > 0, "zero amount");
-        require(whitelistedMarkets[msg.sender], "not whitelisted");
-        require(to != address(0), "invalid target");
-
-        underlyingToken.safeTransfer(to, amount);
     }
 
     /**
@@ -182,8 +188,47 @@ contract BinaryVault is
             _burn(tokenIds[i], true);
         }
         totalStaked -= amount;
+        watermark -= amount;
         underlyingToken.safeTransfer(user, amount);
 
         emit Unstaked(user, amount);
+    }
+
+    function _cutTradingFee(uint256 amount) internal returns (uint256) {
+        uint256 fee = (amount * config.tradingFee()) / 10000;
+        feeAccrued += fee;
+        return amount - fee;
+    }
+
+    /**
+     * @notice Deposit bets on the vault
+     * @dev Only markets can call this function
+     * @param from Betee's address
+     * @param amount Amount of underlying tokens to bet
+     */
+    function bet(address from, uint256 amount) external onlyMarket {
+        if (amount == 0) revert ZERO_AMOUNT();
+        if (from == address(0)) revert ZERO_ADDRESS();
+
+        underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
+        bets[from] += amount;
+        watermark += amount;
+    }
+
+    /**
+     * @notice Claim winning rewards from the vault
+     * @dev Only markets can call this function
+     * @param to Address of winner
+     * @param amount Amount of rewards to claim
+     */
+    function claim(address to, uint256 amount) external onlyMarket {
+        if (amount == 0) revert ZERO_AMOUNT();
+        if (to == address(0)) revert ZERO_ADDRESS();
+        if (bets[to] < amount) revert NO_BETS_TO_CLAIM(to, amount);
+
+        bets[to] -= amount;
+        uint256 claimAmount = _cutTradingFee(amount);
+        watermark -= claimAmount;
+        underlyingToken.safeTransfer(to, claimAmount);
     }
 }
