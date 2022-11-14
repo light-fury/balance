@@ -28,7 +28,7 @@ contract BalanceMerkleDistributor is Ownable {
     /// @notice merkle root
     bytes32 public merkleRoot;
 
-    /// @notice setter adress
+    /// @notice setter address
     address public setter;
 
     constructor(address _setter) {
