@@ -3,6 +3,8 @@
 pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+
+import "./BinaryErrors.sol";
 import "../interfaces/binary/IOracle.sol";
 
 contract Oracle is Ownable, IOracle {
@@ -32,7 +34,7 @@ contract Oracle is Ownable, IOracle {
     );
 
     modifier onlyWriter() {
-        require(writers[msg.sender], "Oracle: not writer");
+        if (!writers[msg.sender]) revert NOT_ORACLE_WRITER(msg.sender);
         _;
     }
 
@@ -43,7 +45,7 @@ contract Oracle is Ownable, IOracle {
      * @param enable Boolean to enable/disable writer
      */
     function setWriter(address writer, bool enable) external onlyOwner {
-        require(writer != address(0), "invalid writer");
+        if (writer == address(0)) revert ZERO_ADDRESS();
         writers[writer] = enable;
         emit WriterUpdated(writer, enable);
     }
@@ -59,16 +61,13 @@ contract Oracle is Ownable, IOracle {
         uint256 timestamp,
         uint256 price
     ) internal {
-        require(
-            rounds[lastRoundId].writer == address(0) ||
-                roundId == lastRoundId + 1,
-            "invalid round"
-        );
-        require(
-            timestamp > rounds[lastRoundId].time &&
-                timestamp <= block.timestamp,
-            "invalid time"
-        );
+        if (
+            rounds[lastRoundId].writer != address(0) &&
+            roundId != lastRoundId + 1
+        ) revert INVALID_ROUND(roundId);
+        if (
+            timestamp <= rounds[lastRoundId].time || timestamp > block.timestamp
+        ) revert INVALID_ROUND_TIME(roundId, timestamp);
 
         Round storage newRound = rounds[roundId];
         newRound.writer = msg.sender;
@@ -107,11 +106,10 @@ contract Oracle is Ownable, IOracle {
         uint256[] memory timestamps,
         uint256[] memory prices
     ) external override onlyWriter {
-        require(
-            roundIds.length == timestamps.length &&
-                roundIds.length == prices.length,
-            "input array mismatch"
-        );
+        if (
+            roundIds.length != timestamps.length ||
+            roundIds.length != prices.length
+        ) revert INPUT_ARRAY_MISMATCH();
         for (uint256 i = 0; i < roundIds.length; i++) {
             _writePrice(roundIds[i], timestamps[i], prices[i]);
         }
@@ -131,6 +129,6 @@ contract Oracle is Ownable, IOracle {
     {
         timestamp = rounds[roundId].time;
         price = rounds[roundId].price;
-        require(timestamp != 0, "invalid round");
+        if (timestamp == 0) revert INVALID_ROUND(roundId);
     }
 }

@@ -62,10 +62,10 @@ describe("Binary Option Trading - Oracle Manager", () => {
 
 			await expect(
 				oracleManager.addOracle(0, oracle2.address)
-			).to.be.revertedWith("already added");
+			).to.be.revertedWith("ORACLE_ALREADY_ADDED");
 			await expect(
 				oracleManager.addOracle(1, ethers.constants.AddressZero)
-			).to.be.revertedWith("invalid oracle");
+			).to.be.revertedWith("ZERO_ADDRESS");
 
 			await oracleManager.addOracle(1, oracle2.address);
 			expect(await oracleManager.oracles(1)).to.be.equal(oracle2.address);
@@ -84,7 +84,7 @@ describe("Binary Option Trading - Oracle Manager", () => {
 		it("should revert when getting price by invalid round id", async () => {
 			await expect(
 				oracleManager.getPrice(0, 5)
-			).to.be.revertedWith('invalid round');
+			).to.be.reverted;
 		})
 		it("should revert when getting price from invalid market", async () => {
 			await expect(

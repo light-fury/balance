@@ -3,6 +3,8 @@
 pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+
+import "./BinaryErrors.sol";
 import "../interfaces/binary/IOracle.sol";
 
 contract OracleManager is Ownable {
@@ -19,8 +21,9 @@ contract OracleManager is Ownable {
      * @param oracle Oracle address
      */
     function addOracle(uint256 marketId, address oracle) external onlyOwner {
-        require(oracles[marketId] == address(0), "already added");
-        require(oracle != address(0), "invalid oracle");
+        if (oracles[marketId] != address(0))
+            revert ORACLE_ALREADY_ADDED(marketId);
+        if (oracle == address(0)) revert ZERO_ADDRESS();
 
         oracles[marketId] = oracle;
 

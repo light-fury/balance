@@ -10,6 +10,7 @@ import "../interfaces/binary/IBinaryConfig.sol";
 import "../interfaces/binary/IBinaryMarket.sol";
 import "../interfaces/binary/IBinaryVault.sol";
 import "../interfaces/binary/IOracle.sol";
+import "./BinaryErrors.sol";
 
 contract BinaryMarket is
     OwnableUpgradeable,
@@ -43,9 +44,9 @@ contract BinaryMarket is
         uint8 version_,
         uint256[] calldata timeframes_
     ) external initializer {
-        require(address(oracle_) != address(0), "invalid oracle");
-        require(address(vault_) != address(0), "invalid vault");
-        require(address(config_) != address(0), "invalid config");
+        if (address(oracle_) == address(0)) revert ZERO_ADDRESS();
+        if (address(vault_) == address(0)) revert ZERO_ADDRESS();
+        if (address(config_) == address(0)) revert ZERO_ADDRESS();
         require(timeframes_.length > 0, "invalid timeframes");
 
         __Ownable_init();
@@ -62,11 +63,22 @@ contract BinaryMarket is
         underlyingToken = vault.underlyingToken();
     }
 
+    /**
+     * @notice Set oracle of underlying token of this market
+     * @dev Only owner can set the oracle
+     * @param oracle_ New oracle address to set
+     */
     function setOracle(IOracle oracle_) external onlyOwner {
         require(address(oracle_) != address(0), "invalid oracle");
         oracle = oracle_;
     }
 
+    /**
+     * @notice Open new position on the market for the next round
+     * @param amount Amount of underlying tokens to bet
+     * @param timeframeId timeframe window
+     * @param direction Long or Short
+     */
     function openPosition(
         uint256 amount,
         uint256 timeframeId,
@@ -105,6 +117,10 @@ contract BinaryMarket is
         );
     }
 
+    /**
+     * @notice Claim winning rewards
+     * @param roundId Round ID to claim winning rewards
+     */
     function claim(uint256 roundId) external {
         uint256 positionId = positionsInRound[roundId][msg.sender];
         require(isClaimable(msg.sender, positionId), "you lose this round");
@@ -112,11 +128,15 @@ contract BinaryMarket is
         PositionInfo memory pos = positions[msg.sender][positionId];
         vault.claim(msg.sender, pos.amount * 2);
 
-        // TODO: maybe remove claimed position from the positions array
+        // TODO: maybe remove claimed position from the positions array to optimize querying performance
 
         emit Claimed(marketId, msg.sender, positionId, pos.amount);
     }
 
+    /**
+     * @notice Return claimability for given user and given round
+     * @return claimability true or false
+     */
     function isClaimable(address user, uint256 positionId)
         public
         view
