@@ -23,6 +23,9 @@ TODO: make private key optional unless deploying
 ## unit tests
 `npx hardhat test`
 
+## Coverage
+`npx hardhat coverage`
+
 ## deploy
 Rinkeby `npx hardhat run --network rinkeby scripts/balancePass.js`
 Ethereum Mainnet `npx hardhat run --network mainnet scripts/balancePass.js`
