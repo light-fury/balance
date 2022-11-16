@@ -18,5 +18,7 @@ error ORACLE_ALREADY_ADDED(uint256 marketId);
 
 // Vault
 error NOT_FROM_MARKET(address caller);
-error NO_BETS_TO_CLAIM(address player, uint256 amount);
+error NO_DEPOSIT(address user);
+error EXCEED_BALANCE(address user, uint256 amount);
+error EXCEED_BETS(address player, uint256 amount);
 error EXPIRED_CLAIM(address player);

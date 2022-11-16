@@ -33,7 +33,7 @@ contract BinaryVault is
     mapping(address => bool) public whitelistedMarkets;
 
     /// token Id => amount, represents user share on the vault
-    mapping(uint256 => uint256) stakedAmounts;
+    mapping(uint256 => uint256) public stakedAmounts;
     /// Binary Players => Bet Amount
     mapping(address => uint256) bets;
 
@@ -90,7 +90,7 @@ contract BinaryVault is
         external
         onlyOwner
     {
-        require(market != address(0), "invalid market");
+        if (market == address(0)) revert ZERO_ADDRESS();
         whitelistedMarkets[market] = whitelist;
     }
 
@@ -141,13 +141,13 @@ contract BinaryVault is
         override
         whenNotPaused
     {
-        require(user != address(0), "zero address");
-        require(amount > 0, "zero amount");
+        if (user == address(0)) revert ZERO_ADDRESS();
+        if (amount == 0) revert ZERO_AMOUNT();
 
         // Transfer underlying token from user to the vault
         underlyingToken.safeTransferFrom(user, address(this), amount);
 
-        // Burn prev token share and mint new one
+        // Burn prev token share
         uint256[] memory tokenIds = tokensOfOwner(user);
         uint256 stakedAmount;
         for (uint256 i = 0; i < tokenIds.length; i++) {
@@ -155,6 +155,7 @@ contract BinaryVault is
             delete stakedAmounts[tokenIds[i]];
             _burn(tokenIds[i], false);
         }
+        // Mint new one
         uint256 tokenId = _nextTokenId();
         stakedAmounts[tokenId] = stakedAmount + amount;
         _mint(user, 1);
@@ -175,11 +176,12 @@ contract BinaryVault is
         override
         whenNotPaused
     {
-        require(amount > 0, "zero amount");
+        if (amount == 0) revert ZERO_AMOUNT();
+        if (user == address(0)) revert ZERO_ADDRESS();
 
-        // collect previous deposits
+        // collect previous deposits and burn
         uint256[] memory tokenIds = tokensOfOwner(user);
-        require(tokenIds.length > 0, "NFTS_NOT_FOUND");
+        if (tokenIds.length == 0) revert NO_DEPOSIT(user);
 
         uint256 stakedAmount;
         for (uint256 i = 0; i < tokenIds.length; i++) {
@@ -187,6 +189,15 @@ contract BinaryVault is
             delete stakedAmounts[tokenIds[i]];
             _burn(tokenIds[i], true);
         }
+        if (amount > stakedAmount) revert EXCEED_BALANCE(user, amount);
+
+        // mint new one when some dust left
+        if (amount < stakedAmount) {
+            uint256 tokenId = _nextTokenId();
+            stakedAmounts[tokenId] = stakedAmount - amount;
+            _mint(user, 1);
+        }
+
         totalStaked -= amount;
         watermark -= amount;
         underlyingToken.safeTransfer(user, amount);
@@ -194,41 +205,53 @@ contract BinaryVault is
         emit Unstaked(user, amount);
     }
 
+    /**
+     * @notice Cut trading fee when claiming winning bets
+     * @dev Transfer fees accrued to the treasury wallet
+     * @param amount Amount to claim
+     * @return claimAmount Actual claimable amount
+     */
     function _cutTradingFee(uint256 amount) internal returns (uint256) {
         uint256 fee = (amount * config.tradingFee()) / 10000;
+        underlyingToken.safeTransfer(config.treasury(), fee);
         feeAccrued += fee;
+
         return amount - fee;
     }
 
     /**
      * @notice Deposit bets on the vault
      * @dev Only markets can call this function
-     * @param from Betee's address
+     * @param user Betee's address
      * @param amount Amount of underlying tokens to bet
      */
-    function bet(address from, uint256 amount) external onlyMarket {
+    function bet(address user, uint256 amount) external onlyMarket {
         if (amount == 0) revert ZERO_AMOUNT();
-        if (from == address(0)) revert ZERO_ADDRESS();
+        if (user == address(0)) revert ZERO_ADDRESS();
 
         underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
-        bets[from] += amount;
+        bets[user] += amount;
         watermark += amount;
+
+        emit Betted(user, amount);
     }
 
     /**
      * @notice Claim winning rewards from the vault
      * @dev Only markets can call this function
-     * @param to Address of winner
+     * @param user Address of winner
      * @param amount Amount of rewards to claim
      */
-    function claim(address to, uint256 amount) external onlyMarket {
+    function claim(address user, uint256 amount) external onlyMarket {
         if (amount == 0) revert ZERO_AMOUNT();
-        if (to == address(0)) revert ZERO_ADDRESS();
-        if (bets[to] < amount) revert NO_BETS_TO_CLAIM(to, amount);
+        if (user == address(0)) revert ZERO_ADDRESS();
+        if (bets[user] < amount) revert EXCEED_BETS(user, amount);
 
-        bets[to] -= amount;
+        bets[user] -= amount;
         uint256 claimAmount = _cutTradingFee(amount);
         watermark -= claimAmount;
-        underlyingToken.safeTransfer(to, claimAmount);
+        underlyingToken.safeTransfer(user, claimAmount);
+
+        emit Claimed(user, amount);
     }
 }

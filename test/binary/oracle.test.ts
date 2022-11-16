@@ -83,7 +83,7 @@ describe("Binary Option Trading - Oracle", () => {
         oracle.connect(writer).writePrice(1, time - 1, price)
       ).to.be.revertedWith("INVALID_ROUND_TIME");
       // Can't write future price
-      const newTime = 1668500000;
+      const newTime = 1670000000;
       await evm_setNextBlockTimestamp(newTime);
       await expect(
         oracle.connect(writer).writePrice(1, newTime + 1, price)

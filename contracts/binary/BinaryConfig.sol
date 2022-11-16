@@ -12,12 +12,15 @@ contract BinaryConfig is OwnableUpgradeable, IBinaryConfig {
     uint256 public tradingFee; // 10000 base
     /// @dev Winners should claim their winning rewards within claim notice period
     uint256 public claimNoticePeriod;
+    /// @dev treasury wallet
+    address public treasury;
 
     function initialize() external initializer {
         __Ownable_init();
 
-        tradingFee = 1000;
+        tradingFee = 1000; // 10% as default
         claimNoticePeriod = 24 hours;
+        treasury = msg.sender;
     }
 
     function setTradingFee(uint256 newTradingFee) external onlyOwner {
@@ -27,5 +30,10 @@ contract BinaryConfig is OwnableUpgradeable, IBinaryConfig {
 
     function setClaimNoticePeriod(uint256 newNoticePeriod) external onlyOwner {
         claimNoticePeriod = newNoticePeriod;
+    }
+
+    function setTreasury(address newTreasury) external onlyOwner {
+        if (newTreasury == address(0)) revert ZERO_ADDRESS();
+        treasury = newTreasury;
     }
 }
