@@ -2,20 +2,19 @@
 
 pragma solidity 0.8.16;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
 import "./BinaryErrors.sol";
 import "../interfaces/binary/IOracle.sol";
 
-contract Oracle is Ownable, IOracle {
+contract Oracle is AccessControl, IOracle {
     struct Round {
         address writer;
         uint256 time; // starting timestamp of the round
         uint256 price; // starting price of the round
     }
 
-    /// @dev Writer => whitelisted
-    mapping(address => bool) public writers;
+    bytes32 public constant WRITER_ROLE = keccak256("WRITER");
 
     /// @dev Prices by roundId
     mapping(uint256 => Round) public rounds;
@@ -33,9 +32,29 @@ contract Oracle is Ownable, IOracle {
         uint256 price
     );
 
-    modifier onlyWriter() {
-        if (!writers[msg.sender]) revert NOT_ORACLE_WRITER(msg.sender);
+    modifier onlyAdmin() {
+        if (!isAdmin(msg.sender)) revert NOT_ORACLE_ADMIN(msg.sender);
         _;
+    }
+
+    modifier onlyWriter() {
+        if (!isWriter(msg.sender)) revert NOT_ORACLE_WRITER(msg.sender);
+        _;
+    }
+
+    constructor() {
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(WRITER_ROLE, DEFAULT_ADMIN_ROLE);
+    }
+
+    /// @dev Return `true` if the account belongs to the admin role.
+    function isAdmin(address account) public view virtual returns (bool) {
+        return hasRole(DEFAULT_ADMIN_ROLE, account);
+    }
+
+    /// @dev Return `true` if the account belongs to the user role.
+    function isWriter(address account) public view virtual returns (bool) {
+        return hasRole(WRITER_ROLE, account);
     }
 
     /**
@@ -44,9 +63,13 @@ contract Oracle is Ownable, IOracle {
      * @param writer Writter address to update
      * @param enable Boolean to enable/disable writer
      */
-    function setWriter(address writer, bool enable) external onlyOwner {
+    function setWriter(address writer, bool enable) external onlyAdmin {
         if (writer == address(0)) revert ZERO_ADDRESS();
-        writers[writer] = enable;
+        if (enable) {
+            grantRole(WRITER_ROLE, writer);
+        } else {
+            revokeRole(WRITER_ROLE, writer);
+        }
         emit WriterUpdated(writer, enable);
     }
 
@@ -121,14 +144,35 @@ contract Oracle is Ownable, IOracle {
      * @return timestamp Round Time
      * @return price Round price
      */
-    function getPrice(uint256 roundId)
-        external
-        view
-        override
-        returns (uint256 timestamp, uint256 price)
-    {
+    function getPrice(
+        uint256 roundId
+    ) external view override returns (uint256 timestamp, uint256 price) {
         timestamp = rounds[roundId].time;
         price = rounds[roundId].price;
         if (timestamp == 0) revert INVALID_ROUND(roundId);
+    }
+
+    /**
+     * @notice External function that returns batch round data
+     * @param startRoundId Starting round id
+     * @param endRoundId Ending round id
+     * @return timestamps timestamps
+     * @return prices prices
+     */
+    function getPrices(
+        uint startRoundId,
+        uint endRoundId
+    ) external view returns (uint[] memory, uint[] memory) {
+        if (startRoundId > endRoundId) revert INVALID_ROUND(startRoundId);
+
+        uint num = endRoundId - startRoundId + 1;
+        uint[] memory timestamps = new uint[](num);
+        uint[] memory prices = new uint[](num);
+        for (uint i = startRoundId; i <= endRoundId; i++) {
+            Round memory round = rounds[i];
+            timestamps[i] = round.time;
+            prices[i] = round.price;
+        }
+        return (timestamps, prices);
     }
 }

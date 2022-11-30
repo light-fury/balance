@@ -8,6 +8,7 @@ import { evm_setNextBlockTimestamp } from "../helper";
 describe("Binary Option Trading - Oracle", () => {
   let owner: SignerWithAddress;
   let writer: SignerWithAddress;
+  let notWriter: SignerWithAddress;
 
   let oracle: Oracle;
 
@@ -15,7 +16,7 @@ describe("Binary Option Trading - Oracle", () => {
   const price = utils.parseEther("1");
 
   before(async () => {
-    [owner, writer] = await ethers.getSigners();
+    [owner, writer, notWriter] = await ethers.getSigners();
   })
 
   beforeEach(async () => {
@@ -30,15 +31,14 @@ describe("Binary Option Trading - Oracle", () => {
         oracle.setWriter(ethers.constants.AddressZero, true)
       ).to.be.revertedWith("ZERO_ADDRESS");
     })
-    it("should allow only owner to add writers", async () => {
+    it("should allow only admin to add writers", async () => {
       await expect(
         oracle.setWriter(writer.address, true)
       ).to.be.emit(oracle, "WriterUpdated").withArgs(writer.address, true);
 
       await expect(
         oracle.connect(writer).setWriter(writer.address, true)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
-      expect(await oracle.writers(writer.address)).to.be.true;
+      ).to.be.revertedWith("NOT_ORACLE_ADMIN");
     })
   })
   describe("Writing Price", () => {
@@ -47,10 +47,9 @@ describe("Binary Option Trading - Oracle", () => {
     })
     it("should permit writing price to only whitelisted writers", async () => {
       await expect(
-        oracle.writePrice(0, time, price)
+        oracle.connect(notWriter).writePrice(0, time, price)
       ).to.be.revertedWith("NOT_ORACLE_WRITER");
 
-      expect(await oracle.writers(writer.address)).to.be.true;
       await expect(
         oracle.connect(writer).writePrice(0, time, price)
       ).to.be.emit(oracle, "WrotePrice").withArgs(writer.address, 0, 12345, price);
@@ -174,6 +173,10 @@ describe("Binary Option Trading - Oracle", () => {
       await expect(
         oracle.getPrice(5)
       ).to.be.revertedWith("INVALID_ROUND");
+    })
+    it("should be able to get batch prices", async () => {
+      const rounds = await oracle.getPrices(0, 2);
+      await expect(rounds[0].length).to.be.equal(3);
     })
   })
 })

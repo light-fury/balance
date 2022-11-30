@@ -47,7 +47,7 @@ contract BinaryMarket is
         if (address(oracle_) == address(0)) revert ZERO_ADDRESS();
         if (address(vault_) == address(0)) revert ZERO_ADDRESS();
         if (address(config_) == address(0)) revert ZERO_ADDRESS();
-        require(timeframes_.length > 0, "invalid timeframes");
+        if (timeframes_.length == 0) revert INVALID_TIMEFRAMES();
 
         __Ownable_init();
 
@@ -69,7 +69,7 @@ contract BinaryMarket is
      * @param oracle_ New oracle address to set
      */
     function setOracle(IOracle oracle_) external onlyOwner {
-        require(address(oracle_) != address(0), "invalid oracle");
+        if (address(oracle_) == address(0)) revert ZERO_ADDRESS();
         oracle = oracle_;
     }
 
@@ -84,20 +84,20 @@ contract BinaryMarket is
         uint256 timeframeId,
         bool direction
     ) external {
-        require(amount > 0, "zero amount");
-        require(timeframeId < timeframes.length, "invalid timeframeId");
+        if (amount == 0) revert ZERO_AMOUNT();
+        if (timeframeId >= timeframes.length)
+            revert INVALID_TIMEFRAME_ID(timeframeId);
 
         underlyingToken.safeTransferFrom(msg.sender, address(vault), amount);
 
         uint256 nextRoundId = oracle.lastRoundId() + 1;
-        require(
-            positionsInRound[nextRoundId][msg.sender] == 0,
-            "already created"
-        );
+        if (positionsInRound[nextRoundId][msg.sender] != 0)
+            revert POS_ALREADY_CREATED(nextRoundId, msg.sender);
         positions[msg.sender].push(
             PositionInfo({
                 owner: msg.sender,
                 direction: direction,
+                claimed: false,
                 amount: amount,
                 timeframeId: timeframeId,
                 roundId: nextRoundId
@@ -123,12 +123,12 @@ contract BinaryMarket is
      */
     function claim(uint256 roundId) external {
         uint256 positionId = positionsInRound[roundId][msg.sender];
-        require(isClaimable(msg.sender, positionId), "you lose this round");
+        if (!isClaimable(msg.sender, positionId))
+            revert CANNOT_CLAIM(roundId, msg.sender);
 
-        PositionInfo memory pos = positions[msg.sender][positionId];
+        PositionInfo storage pos = positions[msg.sender][positionId];
+        pos.claimed = true;
         vault.claim(msg.sender, pos.amount * 2);
-
-        // TODO: maybe remove claimed position from the positions array to optimize querying performance
 
         emit Claimed(marketId, msg.sender, positionId, pos.amount);
     }
@@ -137,11 +137,10 @@ contract BinaryMarket is
      * @notice Return claimability for given user and given round
      * @return claimability true or false
      */
-    function isClaimable(address user, uint256 positionId)
-        public
-        view
-        returns (bool)
-    {
+    function isClaimable(
+        address user,
+        uint256 positionId
+    ) public view returns (bool) {
         PositionInfo memory pos = positions[user][positionId];
         (uint256 timestamp, uint256 startingPrice) = oracle.getPrice(
             pos.roundId

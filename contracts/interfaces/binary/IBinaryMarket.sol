@@ -6,6 +6,7 @@ interface IBinaryMarket {
     struct PositionInfo {
         address owner;
         bool direction;
+        bool claimed;
         uint256 amount;
         uint256 timeframeId;
         uint256 roundId;
