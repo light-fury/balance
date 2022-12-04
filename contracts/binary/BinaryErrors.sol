@@ -15,7 +15,7 @@ error INVALID_ROUND(uint256 roundId);
 error INVALID_ROUND_TIME(uint256 roundId, uint256 timestamp);
 error NOT_ORACLE_ADMIN(address sender);
 error NOT_ORACLE_WRITER(address sender);
-error ORACLE_ALREADY_ADDED(uint256 marketId);
+error ORACLE_ALREADY_ADDED(address market);
 
 // Vault
 error NOT_FROM_MARKET(address caller);

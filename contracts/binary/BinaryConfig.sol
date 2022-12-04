@@ -8,23 +8,29 @@ import "./BinaryErrors.sol";
 import "../interfaces/binary/IBinaryConfig.sol";
 
 contract BinaryConfig is OwnableUpgradeable, IBinaryConfig {
+    uint256 public constant FEE_BASE = 10_000;
     /// @dev Trading fee should be paid when winners claim their rewards, see claim function of Market
-    uint256 public tradingFee; // 10000 base
+    uint256 public tradingFee;
     /// @dev Winners should claim their winning rewards within claim notice period
     uint256 public claimNoticePeriod;
     /// @dev treasury wallet
     address public treasury;
 
-    function initialize() external initializer {
+    function initialize(
+        uint16 tradingFee_,
+        uint256 claimNoticePeriod_,
+        address treasury_
+    ) external initializer {
         __Ownable_init();
-
-        tradingFee = 1000; // 10% as default
-        claimNoticePeriod = 24 hours;
-        treasury = msg.sender;
+        require(tradingFee_ < FEE_BASE, "Too high");
+        require(treasury_ != address(0), "Invalid address");
+        tradingFee = tradingFee_; // 10% as default
+        claimNoticePeriod = claimNoticePeriod_;
+        treasury = treasury_;
     }
 
     function setTradingFee(uint256 newTradingFee) external onlyOwner {
-        if (newTradingFee > 10000) revert TOO_HIGH_FEE();
+        require(newTradingFee < FEE_BASE, "Too high");
         tradingFee = newTradingFee;
     }
 

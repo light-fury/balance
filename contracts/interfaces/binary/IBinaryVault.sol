@@ -17,9 +17,7 @@ interface IBinaryVault {
 
     function whitelistedMarkets(address) external view returns (bool);
 
-    function bet(address from, uint256 amount) external;
-
-    function claim(address to, uint256 amount) external;
+    function claimBettingRewards(address to, uint256 amount) external;
 
     function stake(address user, uint256 amount) external;
 

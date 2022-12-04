@@ -3,8 +3,6 @@
 pragma solidity 0.8.16;
 
 interface IOracle {
-    function lastRoundId() external view returns (uint256);
-
     function writePrice(
         uint256 roundId,
         uint256 timestamp,
@@ -17,8 +15,13 @@ interface IOracle {
         uint256[] memory prices
     ) external;
 
-    function getPrice(uint256 roundId)
+    function getRoundData(uint256 roundId)
         external
         view
         returns (uint256 timestamp, uint256 price);
+    
+    function latestRoundData()
+        external
+        view
+        returns (uint256 roundId, uint256 timestamp, uint256 price);
 }

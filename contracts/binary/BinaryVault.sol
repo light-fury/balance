@@ -212,28 +212,11 @@ contract BinaryVault is
      * @return claimAmount Actual claimable amount
      */
     function _cutTradingFee(uint256 amount) internal returns (uint256) {
-        uint256 fee = (amount * config.tradingFee()) / 10000;
+        uint256 fee = (amount * config.tradingFee()) / config.FEE_BASE();
         underlyingToken.safeTransfer(config.treasury(), fee);
         feeAccrued += fee;
 
         return amount - fee;
-    }
-
-    /**
-     * @notice Deposit bets on the vault
-     * @dev Only markets can call this function
-     * @param user Betee's address
-     * @param amount Amount of underlying tokens to bet
-     */
-    function bet(address user, uint256 amount) external onlyMarket {
-        if (amount == 0) revert ZERO_AMOUNT();
-        if (user == address(0)) revert ZERO_ADDRESS();
-
-        underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
-        bets[user] += amount;
-        watermark += amount;
-
-        emit Betted(user, amount);
     }
 
     /**
@@ -242,7 +225,7 @@ contract BinaryVault is
      * @param user Address of winner
      * @param amount Amount of rewards to claim
      */
-    function claim(address user, uint256 amount) external onlyMarket {
+    function claimBettingRewards(address user, uint256 amount) external onlyMarket {
         if (amount == 0) revert ZERO_AMOUNT();
         if (user == address(0)) revert ZERO_ADDRESS();
         if (bets[user] < amount) revert EXCEED_BETS(user, amount);
