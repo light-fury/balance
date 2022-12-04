@@ -117,7 +117,7 @@ contract BinaryMarket is
      * If it falls below allowed buffer or has not updated, it would be invalid
      */
     function _getPriceFromOracle() internal returns (uint256, uint256, uint256) {
-        (uint256 roundId, uint256 price, uint256 timestamp) = oracle.latestRoundData();
+        (uint256 roundId, uint256 price, uint256 timestamp, ) = oracle.latestRoundData();
        
         require(
             roundId > oracleLatestRoundId,

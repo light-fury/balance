@@ -22,7 +22,7 @@ describe("Binary Option Trading - Vault", () => {
     await uToken.deployed();
 
     const Config = await ethers.getContractFactory("BinaryConfig")
-    config = <BinaryConfig>await upgrades.deployProxy(Config);
+    config = <BinaryConfig>await upgrades.deployProxy(Config, [1000, 86400, treasury.address]);
     await config.deployed();
     await config.setTreasury(treasury.address);
   })
@@ -243,81 +243,4 @@ describe("Binary Option Trading - Vault", () => {
     })
   })
 
-  describe("Trading - Bet", () => {
-    const betAmount = utils.parseEther("100");
-    beforeEach(async () => {
-      await vault.whitelistMarket(market.address, true);
-    })
-
-    it("should allow bet only for whitelisted markets", async () => {
-      await expect(
-        vault.connect(alice).bet(admin.address, betAmount)
-      ).to.be.revertedWith("NOT_FROM_MARKET");
-    })
-    it("should revert betting when invalid inputs provided", async () => {
-      await expect(
-        vault.connect(market).bet(ethers.constants.AddressZero, betAmount)
-      ).to.be.revertedWith("ZERO_ADDRESS");
-
-      await expect(
-        vault.connect(market).bet(admin.address, 0)
-      ).to.be.revertedWith("ZERO_AMOUNT");
-    })
-    it("should be able to place bet on the vault", async () => {
-      await uToken.transfer(market.address, betAmount);
-      await uToken.connect(market).approve(vault.address, betAmount);
-
-      const beforeBalance = await uToken.balanceOf(market.address);
-      await expect(
-        vault.connect(market).bet(admin.address, betAmount)
-      ).to.be.emit(vault, "Betted").withArgs(admin.address, betAmount);
-      const afterBalance = await uToken.balanceOf(market.address);
-      expect(beforeBalance.sub(afterBalance)).to.be.equal(betAmount);
-
-      expect(await uToken.balanceOf(vault.address)).to.be.equal(betAmount);
-      expect(await vault.watermark()).to.be.equal(betAmount);
-    })
-  })
-  describe("Trading - Claim", () => {
-    const betAmount = utils.parseEther("100");
-    beforeEach(async () => {
-      await vault.whitelistMarket(market.address, true);
-      await uToken.transfer(market.address, betAmount);
-      await uToken.connect(market).approve(vault.address, betAmount);
-      await vault.connect(market).bet(admin.address, betAmount);
-    })
-    it("should allow claim only for whitelisted markets", async () => {
-      await expect(
-        vault.connect(alice).claim(admin.address, betAmount)
-      ).to.be.revertedWith("NOT_FROM_MARKET");
-    })
-    it("should revert claim when invalid inputs provided", async () => {
-      await expect(
-        vault.connect(market).claim(ethers.constants.AddressZero, betAmount)
-      ).to.be.revertedWith("ZERO_ADDRESS");
-
-      await expect(
-        vault.connect(market).claim(admin.address, 0)
-      ).to.be.revertedWith("ZERO_AMOUNT");
-    })
-    it("should revert when claiming greater amounts than betted", async () => {
-      await expect(
-        vault.connect(market).claim(admin.address, betAmount.mul(10))
-      ).to.be.revertedWith("EXCEED_BETS");
-    })
-    it("should cut trading fee when claiming winning bets", async () => {
-      const beforeBalance = await uToken.balanceOf(admin.address);
-      await expect(
-        vault.connect(market).claim(admin.address, betAmount)
-      ).to.be.emit(vault, "Claimed").withArgs(admin.address, betAmount);
-      const afterBalance = await uToken.balanceOf(admin.address);
-      // trading fee
-      const tradingFee = betAmount.div(10);
-      const claimAmount = betAmount.sub(tradingFee);
-      expect(afterBalance.sub(beforeBalance)).to.be.equal(claimAmount);
-      expect(await vault.watermark()).to.be.equal(tradingFee);
-      expect(await vault.feeAccrued()).to.be.equal(tradingFee);
-      expect(await uToken.balanceOf(treasury.address)).to.be.equal(tradingFee);
-    })
-  })
 })

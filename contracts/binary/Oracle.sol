@@ -12,6 +12,7 @@ contract Oracle is AccessControl, IOracle {
         uint256 roundId;
         uint256 timestamp;
         uint256 price;
+        address writer;
     }
 
     bytes32 public constant WRITER_ROLE = keccak256("BALANCE_ORACLE_WRITER");
@@ -21,6 +22,9 @@ contract Oracle is AccessControl, IOracle {
 
     /// @dev Round ID of last round, Round ID is zero-based
     Round public latestRoundData;
+
+    /// @dev flag for initializing, default false.
+    bool public genesisStarted;
 
     /// @dev Emit this event when updating writer status
     event WriterUpdated(address indexed writer, bool enabled);
@@ -83,16 +87,21 @@ contract Oracle is AccessControl, IOracle {
         uint256 timestamp,
         uint256 price
     ) internal {
-        require(
-            roundId > latestRoundData.roundId &&
-            timestamp > latestRoundData.timestamp,
-            "Invalid Timestamp"
-        );
+        if (genesisStarted) {
+            require(
+                roundId > latestRoundData.roundId &&
+                timestamp > latestRoundData.timestamp,
+                "Invalid Timestamp"
+            );
+        } else {
+            genesisStarted = true;
+        }
 
         Round storage newRound = rounds[roundId];
         newRound.roundId = roundId;
         newRound.price = price;
         newRound.timestamp = timestamp;
+        newRound.writer = msg.sender;
 
         latestRoundData = newRound;
 

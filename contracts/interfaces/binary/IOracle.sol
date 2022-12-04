@@ -23,5 +23,5 @@ interface IOracle {
     function latestRoundData()
         external
         view
-        returns (uint256 roundId, uint256 timestamp, uint256 price);
+        returns (uint256 roundId, uint256 timestamp, uint256 price, address writer);
 }

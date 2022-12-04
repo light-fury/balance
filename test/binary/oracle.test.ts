@@ -29,7 +29,7 @@ describe("Binary Option Trading - Oracle", () => {
     it("should revert when adding invalid addresses", async () => {
       await expect(
         oracle.setWriter(ethers.constants.AddressZero, true)
-      ).to.be.revertedWith("ZERO_ADDRESS");
+      ).to.be.revertedWith("Invalid address");
     })
     it("should allow only admin to add writers", async () => {
       await expect(
@@ -56,42 +56,32 @@ describe("Binary Option Trading - Oracle", () => {
 
       const rounds = await oracle.rounds(0);
       expect(rounds.writer).to.be.equal(writer.address);
-      expect(rounds.time).to.be.equal(time);
+      expect(rounds.timestamp).to.be.equal(time);
       expect(rounds.price).to.be.equal(price);
-      expect(await oracle.lastRoundId()).to.be.equal(0);
+      expect((await oracle.latestRoundData()).roundId).to.be.equal(0);
     })
     it("should revert when round id is not greater than last round id", async () => {
       await oracle.connect(writer).writePrice(0, time, price)
-      expect(await oracle.lastRoundId()).to.be.equal(0);
-
-      await expect(
-        oracle.connect(writer).writePrice(0, time + 1, price)
-      ).to.be.revertedWith("INVALID_ROUND");
+      expect((await oracle.latestRoundData()).roundId).to.be.equal(0);
 
       await expect(
         oracle.connect(writer).writePrice(1, time + 1, price)
       ).to.be.emit(oracle, "WrotePrice").withArgs(writer.address, 1, time + 1, price);
-      expect(await oracle.lastRoundId()).to.be.equal(1);
+      expect((await oracle.latestRoundData()).roundId).to.be.equal(1);
     })
     it("should revert when the time is not greater than prev round", async () => {
       await oracle.connect(writer).writePrice(0, time, price)
-      expect(await oracle.lastRoundId()).to.be.equal(0);
+      expect((await oracle.latestRoundData()).roundId).to.be.equal(0);
 
       // Can't write price before than the prev round
       await expect(
         oracle.connect(writer).writePrice(1, time - 1, price)
-      ).to.be.revertedWith("INVALID_ROUND_TIME");
-      // Can't write future price
-      const newTime = 1670000000;
-      await evm_setNextBlockTimestamp(newTime);
-      await expect(
-        oracle.connect(writer).writePrice(1, newTime + 1, price)
-      ).to.be.revertedWith("INVALID_ROUND_TIME");
-
+      ).to.be.revertedWith("Invalid Timestamp");
+      
       await expect(
         oracle.connect(writer).writePrice(1, time + 1, price)
       ).to.be.emit(oracle, "WrotePrice").withArgs(writer.address, 1, time + 1, price);
-      expect(await oracle.lastRoundId()).to.be.equal(1);
+      expect((await oracle.latestRoundData()).roundId).to.be.equal(1);
     })
   })
 
@@ -106,14 +96,14 @@ describe("Binary Option Trading - Oracle", () => {
           [time, time + 1, time + 2],
           [price, price]
         )
-      ).to.be.revertedWith("INPUT_ARRAY_MISMATCH");
+      ).to.be.revertedWith("Invalid array length");
       await expect(
         oracle.connect(writer).writeBatchPrices(
           [0, 1, 2],
           [time, time + 1],
           [price, price, price]
         )
-      ).to.be.revertedWith("INPUT_ARRAY_MISMATCH");
+      ).to.be.revertedWith("Invalid array length");
     })
     it("should revert when rounds are not in sequence", async () => {
       await expect(
@@ -122,7 +112,7 @@ describe("Binary Option Trading - Oracle", () => {
           [time, time - 1, time + 2],
           [price, price, price]
         )
-      ).to.be.revertedWith("INVALID_ROUND_TIME");
+      ).to.be.revertedWith("Invalid Timestamp");
 
       await expect(
         oracle.connect(writer).writeBatchPrices(
@@ -130,7 +120,7 @@ describe("Binary Option Trading - Oracle", () => {
           [time, time + 1, time + 2],
           [price, price, price]
         )
-      ).to.be.revertedWith("INVALID_ROUND");
+      ).to.be.revertedWith("Invalid Timestamp");
     })
     it("should permit batch writing to only writer role", async () => {
       await expect(
@@ -161,22 +151,18 @@ describe("Binary Option Trading - Oracle", () => {
       )
     })
     it("should return price data by round id", async () => {
-      let round = await oracle.getPrice(0);
+      let round = await oracle.getRoundData(0);
       expect(round.price).to.be.equal(price);
       expect(round.timestamp).to.be.equal(time);
 
-      round = await oracle.getPrice(1);
+      round = await oracle.getRoundData(1);
       expect(round.price).to.be.equal(price);
       expect(round.timestamp).to.be.equal(time + 1);
     })
     it("should revert when getting price by invalid round id", async () => {
       await expect(
-        oracle.getPrice(5)
-      ).to.be.revertedWith("INVALID_ROUND");
-    })
-    it("should be able to get batch prices", async () => {
-      const rounds = await oracle.getPrices(0, 2);
-      await expect(rounds[0].length).to.be.equal(3);
+        oracle.getRoundData(5)
+      ).to.be.revertedWith("Invalid Round ID");
     })
   })
 })
