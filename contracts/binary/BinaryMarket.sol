@@ -51,6 +51,12 @@ contract BinaryMarket is
     address public adminAddress;
     address public operatorAddress;
 
+    bool public genesisStartOnce;
+
+    /// @dev timeframe id => genesis locked?
+    mapping(uint8 => bool) public genesisLockOnces;
+
+
     modifier onlyAdmin() {
         require(msg.sender == adminAddress, "admin: wut?");
         _;
@@ -77,7 +83,8 @@ contract BinaryMarket is
         uint256 _bufferBlocks,
         TimeFrame[] memory timeframes_,
         address adminAddress_,
-        address operatorAddress_
+        address operatorAddress_,
+        uint256 minBetAmount_
     ) external initializer {
         if (address(oracle_) == address(0)) revert ZERO_ADDRESS();
         if (address(vault_) == address(0)) revert ZERO_ADDRESS();
@@ -94,12 +101,15 @@ contract BinaryMarket is
         marketName = marketName_;
         adminAddress = adminAddress_;
         operatorAddress = operatorAddress_;
+        minBetAmount = minBetAmount_;
 
         for (uint8 i = 0; i < timeframes_.length; i = i + 1) {
             timeframes.push(timeframes_[i]);
+            genesisLockOnces[timeframes_[i].id] = false;
         }
 
         underlyingToken = vault.underlyingToken();
+        genesisStartOnce = false;
     }
 
     /**
@@ -118,7 +128,6 @@ contract BinaryMarket is
      */
     function _getPriceFromOracle() internal returns (uint256, uint256, uint256) {
         (uint256 roundId, uint256 price, uint256 timestamp, ) = oracle.latestRoundData();
-       
         require(
             roundId > oracleLatestRoundId,
             "Oracle update roundId must be larger than oracleLatestRoundId"
@@ -128,9 +137,39 @@ contract BinaryMarket is
     }
 
     function _writeOraclePrice(uint256 timestamp, uint256 price) internal {
-        (uint256 currentRoundId, , uint256 currentTimestamp  ) = _getPriceFromOracle();
-        require(timestamp > currentTimestamp, "Invalid timestamp");
-        oracle.writePrice(currentRoundId + 1, timestamp, price);
+        (uint256 roundId, , uint256 currentTimestamp, ) = oracle.latestRoundData();
+        oracle.writePrice(roundId + 1, timestamp, price);
+    }
+
+    /**
+     * @dev Start genesis round
+     */
+    function genesisStartRound() external onlyOperator whenNotPaused {
+        require(!genesisStartOnce, "Can only run genesisStartRound once");
+
+        for (uint256 i = 0; i < timeframes.length; i = i + 1) {
+            currentEpochs[timeframes[i].id] = currentEpochs[timeframes[i].id] + 1;
+            _startRound(timeframes[i].id, currentEpochs[timeframes[i].id]);
+
+        }
+        genesisStartOnce = true;
+    }
+
+    /**
+     * @dev Lock genesis round
+     */
+    function genesisLockRound(uint8 timeframeId) external onlyOperator whenNotPaused {
+        require(genesisStartOnce, "Can only run after genesisStartRound is triggered");
+        require(!genesisLockOnces[timeframeId], "Can only run genesisLockRound once");
+        
+        oracle.writePrice(oracleLatestRoundId + 1, block.timestamp, 1 wei);
+
+        (uint256 currentRoundId, uint256 currentPrice, ) = _getPriceFromOracle();
+
+        _safeLockRound(timeframeId, currentEpochs[timeframeId], currentRoundId, currentPrice);
+        currentEpochs[timeframeId] = currentEpochs[timeframeId] + 1;
+        _startRound(timeframeId, currentEpochs[timeframeId]);
+        genesisLockOnces[timeframeId] = true;
     }
 
     /**
@@ -141,6 +180,11 @@ contract BinaryMarket is
         uint256 price,
         uint256 timestamp
     ) external onlyOperator whenNotPaused {
+        require(
+            genesisStartOnce,
+            "Can only run after genesisStartRound is triggered"
+        );
+
         // Update oracle price
         _writeOraclePrice(timestamp, price);
 
@@ -148,6 +192,10 @@ contract BinaryMarket is
 
         for (uint8 i = 0; i < timeframeIds.length; i = i + 1) {
             uint8 timeframeId = timeframeIds[i];
+            require(
+                genesisLockOnces[timeframeId],
+                "Can only run after genesisLockOnce is triggered"
+            );
             uint256 currentEpoch = currentEpochs[timeframeId];
             // CurrentEpoch refers to previous round (n-1)
             _safeLockRound(
@@ -175,6 +223,8 @@ contract BinaryMarket is
      * Previous round n-2 must end
      */
     function _safeStartRound(uint8 timeframeId, uint256 epoch) internal {
+        require(genesisStartOnce, "Can only run after genesisStartRound is triggered");
+
         require(
             rounds[timeframeId][epoch - 2].closeBlock != 0,
             "Can only start round after round n-2 has ended"
@@ -441,5 +491,26 @@ contract BinaryMarket is
             !round.oracleCalled &&
             block.number > round.closeBlock + bufferBlocks &&
             betInfo.amount != 0;
+    }
+
+    /**
+    * @dev Pause/unpause
+    */
+
+    function setPause(bool value) external onlyOperator {
+        if (value) {
+            _pause();
+        } else {
+            _unpause();
+        }
+    }
+
+    
+    /**
+     * @dev set minBetAmount
+     * callable by admin
+     */
+    function setMinBetAmount(uint256 _minBetAmount) external onlyAdmin {
+        minBetAmount = _minBetAmount;
     }
 }

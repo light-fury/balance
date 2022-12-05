@@ -1,8 +1,8 @@
 {
   "manifestVersion": "3.2",
   "admin": {
-    "address": "0x86A2EE8FAf9A840F7a2c64CA3d51209F9A02081D",
-    "txHash": "0x9a08f3862e8cb9ea25908af9ce02c632b1bc44ad8db8212d66848cd631dc88b5"
+    "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+    "txHash": "0x8b7a074ee565ffcf8cbcff808118b52566f7583e6f74a893bf5907f753b42692"
   },
   "proxies": [
     {
@@ -68,16 +68,6 @@
     {
       "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
       "txHash": "0xb798ba2ebdea70ea21d016344084a3e5fb4ce6a57b0d7f01b1d39c204ea98c06",
-      "kind": "transparent"
-    },
-    {
-      "address": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
-      "txHash": "0x6bbb004609d6750e87481ef7df5be928e30ab07bb8c80f7d810172d4bd36bbac",
-      "kind": "transparent"
-    },
-    {
-      "address": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
-      "txHash": "0x8a0d61dbdad672636aedcbe34c2c71eb367a806ffaadaf9c0379748e90a9d06e",
       "kind": "transparent"
     },
     {
@@ -176,33 +166,13 @@
       "kind": "transparent"
     },
     {
-      "address": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
-      "txHash": "0x6c4b0a2e7076661cd5d42a238c7fe7112d08e7e128dcd9f496faf216c9c445c2",
-      "kind": "transparent"
-    },
-    {
       "address": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
       "txHash": "0x6026625746fa7c22e14fda93796996b896ceecfacc27e8fc02061548cd2f0597",
       "kind": "transparent"
     },
     {
-      "address": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
-      "txHash": "0x9ef31b8d54eb30f800d33df0dc186a2c8a96ddd8add5e404471c379afff4b120",
-      "kind": "transparent"
-    },
-    {
-      "address": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
-      "txHash": "0x2217a8b9f0ff7a90177be91a549f449e3feee4d6ac518e16cf139353eedfb9f9",
-      "kind": "transparent"
-    },
-    {
       "address": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
       "txHash": "0x389a087b527d874546b1a4a70f827c6afa20e8615311ff53e187128d94873681",
-      "kind": "transparent"
-    },
-    {
-      "address": "0x9A676e781A523b5d0C0e43731313A708CB607508",
-      "txHash": "0x30d4f16cd9748ebac07937f965bedd80f06fb29dd533b3d8b440f1f68ead9991",
       "kind": "transparent"
     },
     {
@@ -613,6 +583,41 @@
     {
       "address": "0xD42912755319665397FF090fBB63B1a31aE87Cee",
       "txHash": "0xd9722b5582b6e68a541007b355035a444692ed4a77565c7bf0a9c0f6c13d7799",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
+      "txHash": "0xd798af4638defbc407464b5c097ade03a8b841276fd8f89fb39860dbd905916a",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
+      "txHash": "0xcef9637b8d05b43624faff1a37e08be953caa3030f3af4ab7adb00e677ec076b",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+      "txHash": "0xf1790c5c89e4520b9f47e5833f4453e15117045de562c684af5f51af99924112",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x9A676e781A523b5d0C0e43731313A708CB607508",
+      "txHash": "0x1b176c39d6784348a6413cd6e2cdeac91b4b58dc38239e59ff5c0427afa8d8de",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+      "txHash": "0x5d61ca51b42b06663cd252721d7984b0c4394cfa45669ecc19d06f7b0f109a8c",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+      "txHash": "0x718d38ee6b10ff9786b9d915263beb3972a722768d2575074a0d3b8bfcfdd0ea",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+      "txHash": "0x99760416bbeba841be166b298f954e58a313b11172bb6811b9ad89820dcadf89",
       "kind": "transparent"
     }
   ],
@@ -1083,8 +1088,8 @@
       }
     },
     "ed0f4ecd590124be8ac8b3ac4d63357e02aa90a7efd09587deeddf3256747ee2": {
-      "address": "0x4631BCAbD6dF18D94796344963cB60d44a4136b6",
-      "txHash": "0x75f66506f43cb98635aeedf7b210d85cd8c0f71248e7a7af1d2a318469d28db8",
+      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "txHash": "0xbb12c32413be6b3bd368fd629d53b9294384d395f15c0ebb94fc033207fd3a2e",
       "layout": {
         "storage": [
           {
@@ -1182,8 +1187,8 @@
       }
     },
     "72328c193c53f1917a704979329e38b20d2cc5d77700cafadb347ab23513d12c": {
-      "address": "0xAA292E8611aDF267e563f334Ee42320aC96D0463",
-      "txHash": "0x9293416c8d1e68fb7b4097dc474772a1ca9aa30bf6e6af6f60a52bb2623a5902",
+      "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+      "txHash": "0x3047c3315482edde1b3be84ac99df32e822dcd19e555f5a0d8d06113ecb5fe9e",
       "layout": {
         "storage": [
           {
@@ -1247,7 +1252,7 @@
             "label": "config",
             "offset": 0,
             "slot": "151",
-            "type": "t_contract(IBinaryConfig)3095",
+            "type": "t_contract(IBinaryConfig)8777",
             "contract": "BinaryVault",
             "src": "contracts\\binary\\BinaryVault.sol:27"
           },
@@ -1263,7 +1268,7 @@
             "label": "underlyingToken",
             "offset": 0,
             "slot": "153",
-            "type": "t_contract(IERC20Upgradeable)487",
+            "type": "t_contract(IERC20Upgradeable)1157",
             "contract": "BinaryVault",
             "src": "contracts\\binary\\BinaryVault.sol:30"
           },
@@ -1333,11 +1338,11 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IBinaryConfig)3095": {
+          "t_contract(IBinaryConfig)8777": {
             "label": "contract IBinaryConfig",
             "numberOfBytes": "20"
           },
-          "t_contract(IERC20Upgradeable)487": {
+          "t_contract(IERC20Upgradeable)1157": {
             "label": "contract IERC20Upgradeable",
             "numberOfBytes": "20"
           },
@@ -1352,6 +1357,435 @@
           "t_mapping(t_uint256,t_uint256)": {
             "label": "mapping(uint256 => uint256)",
             "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "1efa5f00ba69999c54eac2a8c6b06a7957e1b9b622d7c8f2830aa2f7e2e2bc41": {
+      "address": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+      "txHash": "0xbf564bd0c05c3dc44bf8ff195494699cf0ea897753d5d5d281295021ffb635ad",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "marketName",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_string_storage",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:24"
+          },
+          {
+            "label": "oracle",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_contract(IOracle)2972",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:25"
+          },
+          {
+            "label": "vault",
+            "offset": 0,
+            "slot": "153",
+            "type": "t_contract(IBinaryVault)2928",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:26"
+          },
+          {
+            "label": "config",
+            "offset": 0,
+            "slot": "154",
+            "type": "t_contract(IBinaryConfig)2728",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:27"
+          },
+          {
+            "label": "underlyingToken",
+            "offset": 0,
+            "slot": "155",
+            "type": "t_contract(IERC20Upgradeable)487",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:29"
+          },
+          {
+            "label": "timeframes",
+            "offset": 0,
+            "slot": "156",
+            "type": "t_array(t_struct(TimeFrame)2773_storage)dyn_storage",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:32"
+          },
+          {
+            "label": "rounds",
+            "offset": 0,
+            "slot": "157",
+            "type": "t_mapping(t_uint8,t_mapping(t_uint256,t_struct(Round)2755_storage))",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:35"
+          },
+          {
+            "label": "ledger",
+            "offset": 0,
+            "slot": "158",
+            "type": "t_mapping(t_uint8,t_mapping(t_uint256,t_mapping(t_address,t_struct(BetInfo)2766_storage)))",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:38"
+          },
+          {
+            "label": "userRounds",
+            "offset": 0,
+            "slot": "159",
+            "type": "t_mapping(t_uint8,t_mapping(t_address,t_array(t_uint256)dyn_storage))",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:42"
+          },
+          {
+            "label": "currentEpochs",
+            "offset": 0,
+            "slot": "160",
+            "type": "t_mapping(t_uint8,t_uint256)",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:45"
+          },
+          {
+            "label": "minBetAmount",
+            "offset": 0,
+            "slot": "161",
+            "type": "t_uint256",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:48"
+          },
+          {
+            "label": "bufferBlocks",
+            "offset": 0,
+            "slot": "162",
+            "type": "t_uint256",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:49"
+          },
+          {
+            "label": "oracleLatestRoundId",
+            "offset": 0,
+            "slot": "163",
+            "type": "t_uint256",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:50"
+          },
+          {
+            "label": "adminAddress",
+            "offset": 0,
+            "slot": "164",
+            "type": "t_address",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:52"
+          },
+          {
+            "label": "operatorAddress",
+            "offset": 0,
+            "slot": "165",
+            "type": "t_address",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:53"
+          },
+          {
+            "label": "genesisStartOnce",
+            "offset": 20,
+            "slot": "165",
+            "type": "t_bool",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:55"
+          },
+          {
+            "label": "genesisLockOnces",
+            "offset": 0,
+            "slot": "166",
+            "type": "t_mapping(t_uint8,t_bool)",
+            "contract": "BinaryMarket",
+            "src": "contracts\\binary\\BinaryMarket.sol:58"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_struct(TimeFrame)2773_storage)dyn_storage": {
+            "label": "struct IBinaryMarket.TimeFrame[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]",
+            "numberOfBytes": "32"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IBinaryConfig)2728": {
+            "label": "contract IBinaryConfig",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBinaryVault)2928": {
+            "label": "contract IBinaryVault",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20Upgradeable)487": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IOracle)2972": {
+            "label": "contract IOracle",
+            "numberOfBytes": "20"
+          },
+          "t_enum(Position)2758": {
+            "label": "enum IBinaryMarket.Position",
+            "members": [
+              "Bull",
+              "Bear"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_array(t_uint256)dyn_storage)": {
+            "label": "mapping(address => uint256[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(BetInfo)2766_storage)": {
+            "label": "mapping(address => struct IBinaryMarket.BetInfo)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_mapping(t_address,t_struct(BetInfo)2766_storage))": {
+            "label": "mapping(uint256 => mapping(address => struct IBinaryMarket.BetInfo))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Round)2755_storage)": {
+            "label": "mapping(uint256 => struct IBinaryMarket.Round)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint8,t_bool)": {
+            "label": "mapping(uint8 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint8,t_mapping(t_address,t_array(t_uint256)dyn_storage))": {
+            "label": "mapping(uint8 => mapping(address => uint256[]))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint8,t_mapping(t_uint256,t_mapping(t_address,t_struct(BetInfo)2766_storage)))": {
+            "label": "mapping(uint8 => mapping(uint256 => mapping(address => struct IBinaryMarket.BetInfo)))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint8,t_mapping(t_uint256,t_struct(Round)2755_storage))": {
+            "label": "mapping(uint8 => mapping(uint256 => struct IBinaryMarket.Round))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint8,t_uint256)": {
+            "label": "mapping(uint8 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(BetInfo)2766_storage": {
+            "label": "struct IBinaryMarket.BetInfo",
+            "members": [
+              {
+                "label": "position",
+                "type": "t_enum(Position)2758",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "claimed",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(Round)2755_storage": {
+            "label": "struct IBinaryMarket.Round",
+            "members": [
+              {
+                "label": "epoch",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "startBlock",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "lockBlock",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "closeBlock",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "lockPrice",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "closePrice",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "lockOracleId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "closeOracleId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "totalAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "bullAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "9"
+              },
+              {
+                "label": "bearAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "10"
+              },
+              {
+                "label": "oracleCalled",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "11"
+              }
+            ],
+            "numberOfBytes": "384"
+          },
+          "t_struct(TimeFrame)2773_storage": {
+            "label": "struct IBinaryMarket.TimeFrame",
+            "members": [
+              {
+                "label": "id",
+                "type": "t_uint8",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "interval",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "intervalBlocks",
+                "type": "t_uint16",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint16": {
+            "label": "uint16",
+            "numberOfBytes": "2"
           },
           "t_uint256": {
             "label": "uint256",
