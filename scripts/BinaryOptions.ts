@@ -6,6 +6,7 @@ async function main() {
     
     // get wallets
     const [owner, operator, treasury] = await ethers.getSigners();
+    console.log(owner.address, operator.address, treasury.address);
     const network = "goerli";
     const {daiAddress} = require(`./networks-${network}`);
 
@@ -51,13 +52,32 @@ async function main() {
         `Verify:\nnpx hardhat verify --network ${network} ${oracle.address}\n`
     );
 
+    console.log(
+        `Binary Config to: ${config.address}`
+    );
+
+    console.log(
+        `Verify:\nnpx hardhat verify --network ${network} ${config.address}\n`
+    );
+
+    console.log("deploying new vault...");
+    
     // create new vault
-    await vaultManager.createNewVault(
+    await vaultManager.connect(owner).createNewVault(
         "Balance BTC/USDC Vault", "BTCUSDC", 0, daiAddress, config.address
     );
       
     const vaultAddress = await vaultManager.vaults(daiAddress);
+    
+    console.log(
+        `Example Vault to: ${vaultAddress}`
+    );
 
+    console.log(
+        `Verify:\nnpx hardhat verify --network ${network} ${vaultAddress}\n`
+    );
+
+    console.log("deploying new market...")
     // create new binary market
     await marketManager.createMarket(
         oracle.address, vaultAddress, "BTC/USDC Market", "100", [{
@@ -84,14 +104,6 @@ async function main() {
 
     console.log(
         `Verify:\nnpx hardhat verify --network ${network} ${marketAddress}\n`
-    );
-
-    console.log(
-        `Example Vault to: ${vaultAddress}`
-    );
-
-    console.log(
-        `Verify:\nnpx hardhat verify --network ${network} ${vaultAddress}\n`
     );
 
     const market = <BinaryMarket>(new Contract(marketAddress, BinaryMarket__factory.abi, owner));
