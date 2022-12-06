@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "../interfaces/binary/IBinaryMarket.sol";
 import "../interfaces/binary/IBinaryVault.sol";
@@ -554,5 +555,45 @@ contract BinaryMarket is
      */
     function setMinBetAmount(uint256 _minBetAmount) external onlyAdmin {
         minBetAmount = _minBetAmount;
+    }
+
+    /**
+        @dev check if bet is active
+     */
+
+    function getExecutableTimeframes() external view returns(string memory) {
+        string memory result = "";
+        
+        if (!genesisStartOnce) {
+            return result;
+        }
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < timeframes.length; i = i + 1) {
+            uint8 timeframeId = timeframes[i].id;
+
+            if (!genesisLockOnces[timeframeId]) {
+                continue;
+            }
+
+            uint256 currentEpoch = currentEpochs[timeframeId];
+            Round memory round = rounds[timeframeId][currentEpoch];
+            Round memory prevRound = rounds[timeframeId][currentEpoch - 1];
+
+            bool lockable = round.startBlock != 0 && block.number >= round.lockBlock && block.number <= round.lockBlock + bufferBlocks;
+
+            bool closable = prevRound.lockBlock !=0 && block.number >= prevRound.closeBlock && block.number <= prevRound.closeBlock + bufferBlocks;
+
+            if ((!prevRound.oracleCalled || round.totalAmount > 0) && lockable && closable) {
+                if (count > 0) {
+                    result = string.concat(",", result, Strings.toString(timeframeId));
+                } else {
+                    result = string.concat(result, Strings.toString(timeframeId));
+                }
+                count = count + 1;
+            }
+        }
+
+        return result;
     }
 }

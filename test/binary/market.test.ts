@@ -3,7 +3,7 @@ import { loadFixture } from "ethereum-waffle"
 import { ethers, network } from "hardhat"
 import { marketFixture } from "./fixture"
 
-describe("Binary Option Trading - Market", () => {
+describe.only("Binary Option Trading - Market", () => {
     describe("Execute Round", async () => {
         it("Should reverted when not operator: ", async () => {
             const {market, operator, notOperator} = await loadFixture(marketFixture);
@@ -62,6 +62,9 @@ describe("Binary Option Trading - Market", () => {
         it("Should not be able to place bet when paused", async () => {
             const {market, operator, notOperator} = await loadFixture(marketFixture);
             await market.connect(operator).setPause(true);
+            
+            expect(await market.getExecutableTimeframes()).to.be.equal("");
+
             await expect(
                 market.connect(notOperator).openPosition(ethers.utils.parseEther("0.1"), 0, "0")
             ).to.be.revertedWith("Pausable: paused");
@@ -94,6 +97,10 @@ describe("Binary Option Trading - Market", () => {
             const {market, owner, uToken, operator} = await loadFixture(marketFixture);
             const latestBlock = await ethers.provider.getBlock("latest");
             await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
+            
+            const executableTimeframes = await market.getExecutableTimeframes();
+            console.log("executableTimeframes: ", executableTimeframes);
+            expect(executableTimeframes.split(",")[0]).to.be.equal('0');
 
             await market.connect(operator).executeRound([0], 1005, latestBlock.timestamp);
             const currentEpoch = await market.currentEpochs(0);
