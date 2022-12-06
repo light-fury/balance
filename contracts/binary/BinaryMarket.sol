@@ -2,30 +2,47 @@
 
 pragma solidity 0.8.16;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../interfaces/binary/IBinaryConfig.sol";
 import "../interfaces/binary/IBinaryMarket.sol";
 import "../interfaces/binary/IBinaryVault.sol";
 import "../interfaces/binary/IOracle.sol";
 import "./BinaryErrors.sol";
 
 contract BinaryMarket is
-    OwnableUpgradeable,
-    PausableUpgradeable,
+    Pausable,
     IBinaryMarket
 {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
+
+    struct Round {
+        uint256 epoch;
+        uint256 startBlock;
+        uint256 lockBlock;
+        uint256 closeBlock;
+        uint256 lockPrice;
+        uint256 closePrice;
+        uint256 lockOracleId;
+        uint256 closeOracleId;
+        uint256 totalAmount;
+        uint256 bullAmount;
+        uint256 bearAmount;
+        bool oracleCalled;
+    }
+
+    struct BetInfo {
+        Position position;
+        uint256 amount;
+        bool claimed; // default false
+    }
 
     /// @dev Market Data
     string public marketName;
     IOracle public oracle;
     IBinaryVault public vault;
-    IBinaryConfig public config;
 
-    IERC20Upgradeable public underlyingToken;
+    IERC20 public underlyingToken;
 
     /// @dev Timeframes supported in this market.
     TimeFrame[] public timeframes;
@@ -53,6 +70,37 @@ contract BinaryMarket is
 
     bool public genesisStartOnce;
 
+    event PositionOpened(
+        string indexed marketName,
+        address user,
+        uint256 amount,
+        uint256 timeframeId,
+        uint256 roundId,
+        Position position
+    );
+
+    event Claimed(
+        string indexed marketName,
+        address indexed user,
+        uint256 timeframeId,
+        uint256 indexed roundId,
+        uint256 amount
+    );
+
+    event StartRound(uint8 indexed timeframeId, uint256 indexed epoch);
+    event LockRound(
+        uint8 indexed timeframeId,
+        uint256 indexed epoch,
+        uint256 indexed oracleRoundId,
+        uint256 price
+    );
+    event EndRound(
+        uint8 indexed timeframeId,
+        uint256 indexed epoch,
+        uint256 indexed oracleRoundId,
+        uint256 price
+    );
+
     /// @dev timeframe id => genesis locked?
     mapping(uint8 => bool) public genesisLockOnces;
 
@@ -75,27 +123,22 @@ contract BinaryMarket is
         _;
     }
 
-    function initialize(
+    constructor(
         IOracle oracle_,
         IBinaryVault vault_,
-        IBinaryConfig config_,
         string memory marketName_,
         uint256 _bufferBlocks,
         TimeFrame[] memory timeframes_,
         address adminAddress_,
         address operatorAddress_,
         uint256 minBetAmount_
-    ) external initializer {
+    ) {
         if (address(oracle_) == address(0)) revert ZERO_ADDRESS();
         if (address(vault_) == address(0)) revert ZERO_ADDRESS();
-        if (address(config_) == address(0)) revert ZERO_ADDRESS();
         if (timeframes_.length == 0) revert INVALID_TIMEFRAMES();
-
-        __Ownable_init();
 
         oracle = oracle_;
         vault = vault_;
-        config = config_;
         bufferBlocks = _bufferBlocks;
 
         marketName = marketName_;
@@ -117,7 +160,7 @@ contract BinaryMarket is
      * @dev Only owner can set the oracle
      * @param oracle_ New oracle address to set
      */
-    function setOracle(IOracle oracle_) external onlyOwner {
+    function setOracle(IOracle oracle_) external onlyAdmin {
         if (address(oracle_) == address(0)) revert ZERO_ADDRESS();
         oracle = oracle_;
     }
@@ -127,7 +170,7 @@ contract BinaryMarket is
      * If it falls below allowed buffer or has not updated, it would be invalid
      */
     function _getPriceFromOracle() internal returns (uint256, uint256, uint256) {
-        (uint256 roundId, uint256 price, uint256 timestamp, ) = oracle.latestRoundData();
+        (uint256 roundId, uint256 timestamp, uint256 price, ) = oracle.latestRoundData();
         require(
             roundId > oracleLatestRoundId,
             "Oracle update roundId must be larger than oracleLatestRoundId"
@@ -137,7 +180,7 @@ contract BinaryMarket is
     }
 
     function _writeOraclePrice(uint256 timestamp, uint256 price) internal {
-        (uint256 roundId, , uint256 currentTimestamp, ) = oracle.latestRoundData();
+        (uint256 roundId, uint256 currentTimestamp, , ) = oracle.latestRoundData();
         oracle.writePrice(roundId + 1, timestamp, price);
     }
 
@@ -184,7 +227,6 @@ contract BinaryMarket is
             genesisStartOnce,
             "Can only run after genesisStartRound is triggered"
         );
-
         // Update oracle price
         _writeOraclePrice(timestamp, price);
 
@@ -359,7 +401,7 @@ contract BinaryMarket is
 
         // Update user data
         BetInfo storage betInfo = ledger[timeframeId][currentEpoch][msg.sender];
-        betInfo.position = Position.Bear;
+        betInfo.position = position;
         betInfo.amount = amount;
         userRounds[timeframeId][msg.sender].push(currentEpoch);
 

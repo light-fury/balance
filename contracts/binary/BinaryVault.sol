@@ -2,10 +2,9 @@
 
 pragma solidity 0.8.16;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "erc721a-upgradeable/contracts/extensions/ERC721AQueryableUpgradeable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
 import "../interfaces/binary/IBinaryVault.sol";
 import "../interfaces/binary/IBinaryConfig.sol";
@@ -17,66 +16,64 @@ import "./BinaryErrors.sol";
  * @author Balance Capital, @gmspacex
  */
 contract BinaryVault is
-    ERC721AQueryableUpgradeable,
-    OwnableUpgradeable,
-    PausableUpgradeable,
+    ERC721AQueryable,
+    Pausable,
     IBinaryVault
 {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     IBinaryConfig public config;
 
     uint256 public vaultId;
-    IERC20Upgradeable public underlyingToken;
+    IERC20 public underlyingToken;
 
     /// @dev Whitelisted markets, only whitelisted markets can take money out from the vault.
     mapping(address => bool) public whitelistedMarkets;
 
     /// token Id => amount, represents user share on the vault
     mapping(uint256 => uint256) public stakedAmounts;
-    /// Binary Players => Bet Amount
-    mapping(address => uint256) bets;
 
-    uint256 public watermark;
     uint256 public totalStaked;
     uint256 public feeAccrued;
+    
+    address public adminAddress;
 
     modifier onlyMarket() {
         if (!whitelistedMarkets[msg.sender]) revert NOT_FROM_MARKET(msg.sender);
         _;
     }
 
-    /**
-     * @notice one time initialize
-     */
-    function initialize(
+    modifier onlyAdmin() {
+        require(msg.sender == adminAddress, "admin: wut?");
+        _;
+    }
+
+    constructor(
         string memory name_,
         string memory symbol_,
         uint256 vaultId_,
         address underlyingToken_,
-        address config_
-    ) public initializerERC721A initializer {
-        __ERC721A_init(name_, symbol_);
-        __Ownable_init();
-        __Pausable_init();
-
+        address config_,
+        address admin_
+    ) ERC721A(name_, symbol_) Pausable() {
         if (underlyingToken_ == address(0)) revert ZERO_ADDRESS();
         if (config_ == address(0)) revert ZERO_ADDRESS();
 
-        underlyingToken = IERC20Upgradeable(underlyingToken_);
+        underlyingToken = IERC20(underlyingToken_);
         config = IBinaryConfig(config_);
         vaultId = vaultId_;
+        adminAddress = admin_;
     }
 
     /**
      * @notice Pause the vault, it affects stake and unstake
      * @dev Only owner can call this function
      */
-    function pauseVault() external onlyOwner {
+    function pauseVault() external onlyAdmin {
         _pause();
     }
 
-    function unpauseVault() external onlyOwner {
+    function unpauseVault() external onlyAdmin {
         _unpause();
     }
 
@@ -88,7 +85,7 @@ contract BinaryVault is
      */
     function whitelistMarket(address market, bool whitelist)
         external
-        onlyOwner
+        onlyAdmin
     {
         if (market == address(0)) revert ZERO_ADDRESS();
         whitelistedMarkets[market] = whitelist;
@@ -161,7 +158,6 @@ contract BinaryVault is
         _mint(user, 1);
 
         totalStaked += amount;
-        watermark += amount;
 
         emit Staked(user, tokenId, amount);
     }
@@ -199,7 +195,6 @@ contract BinaryVault is
         }
 
         totalStaked -= amount;
-        watermark -= amount;
         underlyingToken.safeTransfer(user, amount);
 
         emit Unstaked(user, amount);
@@ -228,13 +223,19 @@ contract BinaryVault is
     function claimBettingRewards(address user, uint256 amount) external onlyMarket {
         if (amount == 0) revert ZERO_AMOUNT();
         if (user == address(0)) revert ZERO_ADDRESS();
-        if (bets[user] < amount) revert EXCEED_BETS(user, amount);
 
-        bets[user] -= amount;
         uint256 claimAmount = _cutTradingFee(amount);
-        watermark -= claimAmount;
         underlyingToken.safeTransfer(user, claimAmount);
 
         emit Claimed(user, amount);
+    }
+
+    /**
+    * @notice Change admin
+    */
+
+    function setAdmin(address _newAdmin) external onlyAdmin {
+        require(_newAdmin != address(0), "Invalid address");
+        adminAddress = _newAdmin;
     }
 }

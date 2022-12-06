@@ -22,15 +22,15 @@ describe("Binary Option Trading - Vault", () => {
     await uToken.deployed();
 
     const Config = await ethers.getContractFactory("BinaryConfig")
-    config = <BinaryConfig>await upgrades.deployProxy(Config, [1000, 86400, treasury.address]);
+    config = <BinaryConfig>await Config.deploy(1000, 86400, treasury.address);
     await config.deployed();
     await config.setTreasury(treasury.address);
   })
   beforeEach(async () => {
     const VaultFactory = await ethers.getContractFactory("BinaryVault");
-    vault = <BinaryVault>await upgrades.deployProxy(VaultFactory, [
-      "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address
-    ]);
+    vault = <BinaryVault>await VaultFactory.deploy(
+      "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address, admin.address
+    );
     await vault.deployed();
   })
 
@@ -38,23 +38,23 @@ describe("Binary Option Trading - Vault", () => {
     it("should revert deployment when invalid inputs provided", async () => {
       const VaultFactory = await ethers.getContractFactory("BinaryVault");
       await expect(
-        upgrades.deployProxy(VaultFactory, [
-          "Balance BTC/USDC Vault", "BTCUSDC", 0, ethers.constants.AddressZero, config.address
-        ])
+        VaultFactory.deploy(
+          "Balance BTC/USDC Vault", "BTCUSDC", 0, ethers.constants.AddressZero, config.address, admin.address
+        )
       ).to.be.revertedWith("ZERO_ADDRESS");
 
       await expect(
-        upgrades.deployProxy(VaultFactory, [
-          "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, ethers.constants.AddressZero
-        ])
+        VaultFactory.deploy(
+          "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, ethers.constants.AddressZero, admin.address
+        )
       ).to.be.revertedWith("ZERO_ADDRESS");
     })
 
     it("should be able to deploy vault contract with valid inputs", async () => {
       const VaultFactory = await ethers.getContractFactory("BinaryVault");
-      const vault = <BinaryVault>await upgrades.deployProxy(VaultFactory, [
-        "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address
-      ]);
+      const vault = <BinaryVault>await VaultFactory.deploy(
+        "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address, admin.address
+      );
 
       expect(await vault.underlyingToken()).to.be.equal(uToken.address);
       expect(await vault.config()).to.be.equal(config.address);
@@ -68,7 +68,7 @@ describe("Binary Option Trading - Vault", () => {
 
       await expect(
         vault.connect(alice).pauseVault()
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      ).to.be.revertedWith("admin: wut?");
 
       await vault.pauseVault();
       expect(await vault.paused()).to.be.true;
@@ -79,7 +79,7 @@ describe("Binary Option Trading - Vault", () => {
 
       await expect(
         vault.connect(alice).unpauseVault()
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      ).to.be.revertedWith("admin: wut?");
 
       await vault.unpauseVault();
       expect(await vault.paused()).to.be.false;
@@ -89,7 +89,7 @@ describe("Binary Option Trading - Vault", () => {
 
       await expect(
         vault.connect(alice).whitelistMarket(market.address, true)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      ).to.be.revertedWith("admin: wut?");
 
       await expect(
         vault.whitelistMarket(ethers.constants.AddressZero, true)
@@ -138,7 +138,6 @@ describe("Binary Option Trading - Vault", () => {
       expect(tokenIds[0]).to.be.equal(0);
 
       expect(await vault.totalStaked()).to.be.equal(stakeAmount);
-      expect(await vault.watermark()).to.be.equal(stakeAmount);
       expect(await vault.stakedAmounts(tokenIds[0])).to.be.equal(stakeAmount);
     })
 
@@ -157,7 +156,6 @@ describe("Binary Option Trading - Vault", () => {
       expect(tokenIds[0]).to.be.equal(1); // tokenId increased
 
       expect(await vault.totalStaked()).to.be.equal(stakeAmount.mul(2));
-      expect(await vault.watermark()).to.be.equal(stakeAmount.mul(2));
       expect(await vault.stakedAmounts(tokenIds[0])).to.be.equal(stakeAmount.mul(2));
     })
   })
@@ -219,7 +217,6 @@ describe("Binary Option Trading - Vault", () => {
       expect(tokenIds.length).to.be.equal(1);
 
       expect(await vault.totalStaked()).to.be.equal(stakedBalance.div(2));
-      expect(await vault.watermark()).to.be.equal(stakedBalance.div(2));
       expect(await vault.stakedAmounts(tokenIds[0])).to.be.equal(stakedBalance.div(2));
     })
     it("should burn NFTs when unstake all", async () => {
@@ -239,7 +236,6 @@ describe("Binary Option Trading - Vault", () => {
       expect(tokenIds.length).to.be.equal(0);
 
       expect(await vault.totalStaked()).to.be.equal(0);
-      expect(await vault.watermark()).to.be.equal(0);
     })
   })
 

@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.16;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IBinaryVault {
     event Staked(address user, uint256 tokenId, uint256 amount);
@@ -13,7 +13,7 @@ interface IBinaryVault {
 
     event Claimed(address user, uint256 amount);
 
-    function underlyingToken() external view returns (IERC20Upgradeable);
+    function underlyingToken() external view returns (IERC20);
 
     function whitelistedMarkets(address) external view returns (bool);
 

@@ -1,7 +1,6 @@
 import { expect } from "chai"
 import { loadFixture } from "ethereum-waffle"
 import { ethers, network } from "hardhat"
-import { evm_mine_blocks } from "../helper"
 import { marketFixture } from "./fixture"
 
 describe.only("Binary Option Trading - Market", () => {
@@ -78,5 +77,91 @@ describe.only("Binary Option Trading - Market", () => {
                 market.connect(notOperator).openPosition(ethers.utils.parseEther("0.01"), 0, "0")
             ).to.be.revertedWith("Bet amount must be greater than minBetAmount");
         });
-    })
+
+        it("Should be able to place bet with enough bet amount", async () => {
+            const {market, owner, uToken, notOperator} = await loadFixture(marketFixture);
+            await uToken.connect(owner).transfer(notOperator.address, ethers.utils.parseEther("1"));
+            await uToken.connect(notOperator).approve(market.address, ethers.utils.parseEther("100"));
+            const currentEpoch = await market.currentEpochs(0);
+            await market.connect(notOperator).openPosition(ethers.utils.parseEther("1"), 0, 0);
+            
+            expect(await market.userRounds(0, notOperator.address, 0)).to.be.equal(currentEpoch);
+            const betAmount = (await market.ledger(0, currentEpoch.toNumber(), notOperator.address)).amount;
+            expect(betAmount).to.be.equal(ethers.utils.parseEther("1"));
+        });
+
+        it("Should be able to lock current round", async () => {
+            const {market, owner, uToken, operator} = await loadFixture(marketFixture);
+            const latestBlock = await ethers.provider.getBlock("latest");
+            await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
+
+            await market.connect(operator).executeRound([0], 1005, latestBlock.timestamp);
+            const currentEpoch = await market.currentEpochs(0);
+            const round = await market.rounds(0, currentEpoch.toNumber() - 1);
+            expect((await market.rounds(0, currentEpoch.toNumber() - 1)).lockPrice).to.be.equal(1005);
+        });
+
+        it("Should be able to close current round", async () => {
+            const {market, owner, uToken, operator} = await loadFixture(marketFixture);
+            const latestBlock = await ethers.provider.getBlock("latest");
+
+            // move block
+            await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
+
+            await market.connect(operator).executeRound([0], 1008, latestBlock.timestamp);
+            const currentEpoch = await market.currentEpochs(0);
+            const round = await market.rounds(0, currentEpoch.toNumber() - 1);
+            expect((await market.rounds(0, currentEpoch.toNumber() - 2)).closePrice).to.be.equal(1008);
+        });
+
+        it("Should not be able to close current round within progress", async () => {
+            const {market, owner, uToken, operator} = await loadFixture(marketFixture);
+            const latestBlock = await ethers.provider.getBlock("latest");
+
+            await expect(market.connect(operator).executeRound([0], 1008, latestBlock.timestamp)).to.be.revertedWith("Can only lock round after lockBlock");
+        });
+    });
+
+    describe("Claim", () => {
+        it("Claimable", async () => {
+            const {market, notOperator, uToken, operator} = await loadFixture(marketFixture);
+            const epoch = await market.connect(notOperator).userRounds(0, notOperator.address, 0);
+            const betInfo = await market.ledger(0, epoch, notOperator.address);
+            expect(await market.connect(notOperator).isClaimable(0, epoch, notOperator.address)).to.be.equal(true);
+        });
+
+        it("Claim", async () => {
+            const {market, notOperator, uToken, operator} = await loadFixture(marketFixture);
+            const epoch = await market.connect(notOperator).userRounds(0, notOperator.address, 0);
+            const prevBalance = await uToken.balanceOf(notOperator.address);
+            await market.connect(notOperator).claim(0, epoch);
+            const afterBalance = await uToken.balanceOf(notOperator.address);
+            expect(afterBalance.sub(prevBalance)).to.be.equal(ethers.utils.parseEther("1").mul(2).mul(9).div(10))
+        });
+
+        it("Prevent duplicate claim", async () => {
+            const {market, notOperator, uToken, operator} = await loadFixture(marketFixture);
+            const epoch = await market.connect(notOperator).userRounds(0, notOperator.address, 0);
+            await expect(market.connect(notOperator).claim(0, epoch)).to.be.revertedWith('Rewards claimed');
+        });
+        
+        it("Should not be claimable before round ends", async () => {
+            const {market, notOperator, uToken, operator} = await loadFixture(marketFixture);
+            const epoch = await market.connect(notOperator).userRounds(0, notOperator.address, 0);
+            await expect(market.connect(notOperator).claim(0, epoch.add(1))).to.be.revertedWith('Round has not ended');
+        });
+
+        it("Should not be claimable before round ends", async () => {
+            const {market, notOperator, uToken, operator} = await loadFixture(marketFixture);
+            const epoch = await market.connect(notOperator).userRounds(0, notOperator.address, 0);
+            await expect(market.connect(notOperator).claim(0, epoch.add(2))).to.be.revertedWith('Round has not ended');
+        });
+
+        it("Should not be claimable before round starts", async () => {
+            const {market, notOperator, uToken, operator} = await loadFixture(marketFixture);
+            const epoch = await market.connect(notOperator).userRounds(0, notOperator.address, 0);
+            await expect(market.connect(notOperator).claim(0, epoch.add(3))).to.be.revertedWith('Round has not started');
+        });
+        
+    });
 })

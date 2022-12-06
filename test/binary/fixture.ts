@@ -1,10 +1,7 @@
-import { deployContract } from "ethereum-waffle";
-import { ethers, upgrades } from "hardhat";
+import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
-import { expect } from "chai";
-import { utils } from "ethers";
-import { evm_setNextBlockTimestamp } from "../helper";
-import { Oracle, BinaryConfig, BinaryVault, MockERC20, BinaryMarket } from "../../typechain-types";
+import { Contract, utils } from "ethers";
+import { Oracle, BinaryConfig, BinaryVault, MockERC20, BinaryMarket, BinaryMarket__factory, BinaryVault__factory } from "../../typechain-types";
 
 export async function marketFixture() {
     let owner: SignerWithAddress;
@@ -31,21 +28,29 @@ export async function marketFixture() {
     await oracle.deployed();
 
     // deploy binary config
-    const Config = await ethers.getContractFactory("BinaryConfig")
-    config = <BinaryConfig>await upgrades.deployProxy(Config, [1000, 86400, treasury.address]);
+    const ConfigFactory = await ethers.getContractFactory("BinaryConfig")
+    config = await ConfigFactory.deploy(1000, 86400, treasury.address);
     await config.deployed();
 
     // deploy binary vault
-    const VaultFactory = await ethers.getContractFactory("BinaryVault");
-    vault = <BinaryVault>await upgrades.deployProxy(VaultFactory, [
-      "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address
-    ]);
-    await vault.deployed();
+    const VaultManagerFactory = await ethers.getContractFactory("BinaryVaultManager");
+    const vaultManager = await VaultManagerFactory.deploy();
+    await vaultManager.deployed();
+
+    await vaultManager.createNewVault(
+      "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address, false
+    );
+    
+    const vaultAddress = await vaultManager.vaults(uToken.address);
+    vault = <BinaryVault>(new Contract(vaultAddress, BinaryVault__factory.abi, owner));
+
+    const MarketManagerFactory = await ethers.getContractFactory("BinaryMarketManager");
+    const marketManager = await MarketManagerFactory.deploy();
+    await marketManager.deployed();
 
     // deploy binary market
-    const MarketFactory = await ethers.getContractFactory("BinaryMarket");
-    market = <BinaryMarket>await upgrades.deployProxy(MarketFactory, [
-        oracle.address, vault.address, config.address, "BTC/USDC Market", "100", [{
+    await marketManager.createMarket(
+        oracle.address, vault.address, "BTC/USDC Market", "100", [{
             id: 0,
             interval: 60, // 60s = 1m,
             intervalBlocks: 10, // 60s means 10 blocks
@@ -59,10 +64,13 @@ export async function marketFixture() {
             intervalBlocks: 150
         }], 
         owner.address, operator.address, utils.parseEther("0.1")
-    ]);
-    await market.deployed();
+    );
 
+    const marketAddress = (await marketManager.allMarkets(0)).market;
+    market = <BinaryMarket>(new Contract(marketAddress, BinaryMarket__factory.abi, owner));
     await oracle.setWriter(market.address, true);
+    await vault.connect(owner).whitelistMarket(market.address, true);
+    await uToken.connect(owner).transfer(vault.address, ethers.utils.parseEther("50"));
 
     return {owner, operator, notOperator, oracle, uToken, config, vault, market};
 }

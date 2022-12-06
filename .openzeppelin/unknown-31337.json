@@ -2,7 +2,7 @@
   "manifestVersion": "3.2",
   "admin": {
     "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-    "txHash": "0x8b7a074ee565ffcf8cbcff808118b52566f7583e6f74a893bf5907f753b42692"
+    "txHash": "0xdfc85f2e3fe8c977fc1e5c73e9edf5934da5b39381b37829f55ffd81e2325eb1"
   },
   "proxies": [
     {
@@ -607,17 +607,17 @@
     },
     {
       "address": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
-      "txHash": "0x5d61ca51b42b06663cd252721d7984b0c4394cfa45669ecc19d06f7b0f109a8c",
+      "txHash": "0xf1646ccf4dcc944d9b0f3a79c768623409ba049c913a251ffd069e58febff563",
       "kind": "transparent"
     },
     {
       "address": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
-      "txHash": "0x718d38ee6b10ff9786b9d915263beb3972a722768d2575074a0d3b8bfcfdd0ea",
+      "txHash": "0x93b10d8428148320f8661ba9900e055d1314bd2d6a915411d65183d8a748697c",
       "kind": "transparent"
     },
     {
       "address": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
-      "txHash": "0x99760416bbeba841be166b298f954e58a313b11172bb6811b9ad89820dcadf89",
+      "txHash": "0xa79a108d28fdfe497f0280d601c3fdc97f970562d1afbd802450135c968ee9bb",
       "kind": "transparent"
     }
   ],
@@ -1089,7 +1089,7 @@
     },
     "ed0f4ecd590124be8ac8b3ac4d63357e02aa90a7efd09587deeddf3256747ee2": {
       "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-      "txHash": "0xbb12c32413be6b3bd368fd629d53b9294384d395f15c0ebb94fc033207fd3a2e",
+      "txHash": "0xa87df2c1674cf54f0175707ee3209965ba6995f08f0b887b5bf179bf2dca9f22",
       "layout": {
         "storage": [
           {
@@ -1186,192 +1186,9 @@
         }
       }
     },
-    "72328c193c53f1917a704979329e38b20d2cc5d77700cafadb347ab23513d12c": {
-      "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
-      "txHash": "0x3047c3315482edde1b3be84ac99df32e822dcd19e555f5a0d8d06113ecb5fe9e",
-      "layout": {
-        "storage": [
-          {
-            "label": "_initialized",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_uint8",
-            "contract": "Initializable",
-            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:62",
-            "retypedFrom": "bool"
-          },
-          {
-            "label": "_initializing",
-            "offset": 1,
-            "slot": "0",
-            "type": "t_bool",
-            "contract": "Initializable",
-            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:67"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ContextUpgradeable",
-            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:36"
-          },
-          {
-            "label": "_owner",
-            "offset": 0,
-            "slot": "51",
-            "type": "t_address",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:22"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "52",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:94"
-          },
-          {
-            "label": "_paused",
-            "offset": 0,
-            "slot": "101",
-            "type": "t_bool",
-            "contract": "PausableUpgradeable",
-            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:29"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "102",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "PausableUpgradeable",
-            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:116"
-          },
-          {
-            "label": "config",
-            "offset": 0,
-            "slot": "151",
-            "type": "t_contract(IBinaryConfig)8777",
-            "contract": "BinaryVault",
-            "src": "contracts\\binary\\BinaryVault.sol:27"
-          },
-          {
-            "label": "vaultId",
-            "offset": 0,
-            "slot": "152",
-            "type": "t_uint256",
-            "contract": "BinaryVault",
-            "src": "contracts\\binary\\BinaryVault.sol:29"
-          },
-          {
-            "label": "underlyingToken",
-            "offset": 0,
-            "slot": "153",
-            "type": "t_contract(IERC20Upgradeable)1157",
-            "contract": "BinaryVault",
-            "src": "contracts\\binary\\BinaryVault.sol:30"
-          },
-          {
-            "label": "whitelistedMarkets",
-            "offset": 0,
-            "slot": "154",
-            "type": "t_mapping(t_address,t_bool)",
-            "contract": "BinaryVault",
-            "src": "contracts\\binary\\BinaryVault.sol:33"
-          },
-          {
-            "label": "stakedAmounts",
-            "offset": 0,
-            "slot": "155",
-            "type": "t_mapping(t_uint256,t_uint256)",
-            "contract": "BinaryVault",
-            "src": "contracts\\binary\\BinaryVault.sol:36"
-          },
-          {
-            "label": "bets",
-            "offset": 0,
-            "slot": "156",
-            "type": "t_mapping(t_address,t_uint256)",
-            "contract": "BinaryVault",
-            "src": "contracts\\binary\\BinaryVault.sol:38"
-          },
-          {
-            "label": "watermark",
-            "offset": 0,
-            "slot": "157",
-            "type": "t_uint256",
-            "contract": "BinaryVault",
-            "src": "contracts\\binary\\BinaryVault.sol:40"
-          },
-          {
-            "label": "totalStaked",
-            "offset": 0,
-            "slot": "158",
-            "type": "t_uint256",
-            "contract": "BinaryVault",
-            "src": "contracts\\binary\\BinaryVault.sol:41"
-          },
-          {
-            "label": "feeAccrued",
-            "offset": 0,
-            "slot": "159",
-            "type": "t_uint256",
-            "contract": "BinaryVault",
-            "src": "contracts\\binary\\BinaryVault.sol:42"
-          }
-        ],
-        "types": {
-          "t_address": {
-            "label": "address",
-            "numberOfBytes": "20"
-          },
-          "t_array(t_uint256)49_storage": {
-            "label": "uint256[49]",
-            "numberOfBytes": "1568"
-          },
-          "t_array(t_uint256)50_storage": {
-            "label": "uint256[50]",
-            "numberOfBytes": "1600"
-          },
-          "t_bool": {
-            "label": "bool",
-            "numberOfBytes": "1"
-          },
-          "t_contract(IBinaryConfig)8777": {
-            "label": "contract IBinaryConfig",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IERC20Upgradeable)1157": {
-            "label": "contract IERC20Upgradeable",
-            "numberOfBytes": "20"
-          },
-          "t_mapping(t_address,t_bool)": {
-            "label": "mapping(address => bool)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_uint256)": {
-            "label": "mapping(address => uint256)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_uint256,t_uint256)": {
-            "label": "mapping(uint256 => uint256)",
-            "numberOfBytes": "32"
-          },
-          "t_uint256": {
-            "label": "uint256",
-            "numberOfBytes": "32"
-          },
-          "t_uint8": {
-            "label": "uint8",
-            "numberOfBytes": "1"
-          }
-        }
-      }
-    },
-    "1efa5f00ba69999c54eac2a8c6b06a7957e1b9b622d7c8f2830aa2f7e2e2bc41": {
+    "a72dff2299e348566ddd89899c2e4cac5e3e1f7a04c6f1c3982dc3050518d6be": {
       "address": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
-      "txHash": "0xbf564bd0c05c3dc44bf8ff195494699cf0ea897753d5d5d281295021ffb635ad",
+      "txHash": "0xdeb1fa98a296a4a7d1f147795cad8040abc0a80e59a4e7d9265dc085a10b1f5a",
       "layout": {
         "storage": [
           {
@@ -1443,7 +1260,7 @@
             "label": "oracle",
             "offset": 0,
             "slot": "152",
-            "type": "t_contract(IOracle)2972",
+            "type": "t_contract(IOracle)2944",
             "contract": "BinaryMarket",
             "src": "contracts\\binary\\BinaryMarket.sol:25"
           },
@@ -1451,7 +1268,7 @@
             "label": "vault",
             "offset": 0,
             "slot": "153",
-            "type": "t_contract(IBinaryVault)2928",
+            "type": "t_contract(IBinaryVault)2900",
             "contract": "BinaryMarket",
             "src": "contracts\\binary\\BinaryMarket.sol:26"
           },
@@ -1459,7 +1276,7 @@
             "label": "config",
             "offset": 0,
             "slot": "154",
-            "type": "t_contract(IBinaryConfig)2728",
+            "type": "t_contract(IBinaryConfig)2700",
             "contract": "BinaryMarket",
             "src": "contracts\\binary\\BinaryMarket.sol:27"
           },
@@ -1475,7 +1292,7 @@
             "label": "timeframes",
             "offset": 0,
             "slot": "156",
-            "type": "t_array(t_struct(TimeFrame)2773_storage)dyn_storage",
+            "type": "t_array(t_struct(TimeFrame)2745_storage)dyn_storage",
             "contract": "BinaryMarket",
             "src": "contracts\\binary\\BinaryMarket.sol:32"
           },
@@ -1483,7 +1300,7 @@
             "label": "rounds",
             "offset": 0,
             "slot": "157",
-            "type": "t_mapping(t_uint8,t_mapping(t_uint256,t_struct(Round)2755_storage))",
+            "type": "t_mapping(t_uint8,t_mapping(t_uint256,t_struct(Round)2727_storage))",
             "contract": "BinaryMarket",
             "src": "contracts\\binary\\BinaryMarket.sol:35"
           },
@@ -1491,7 +1308,7 @@
             "label": "ledger",
             "offset": 0,
             "slot": "158",
-            "type": "t_mapping(t_uint8,t_mapping(t_uint256,t_mapping(t_address,t_struct(BetInfo)2766_storage)))",
+            "type": "t_mapping(t_uint8,t_mapping(t_uint256,t_mapping(t_address,t_struct(BetInfo)2738_storage)))",
             "contract": "BinaryMarket",
             "src": "contracts\\binary\\BinaryMarket.sol:38"
           },
@@ -1573,7 +1390,7 @@
             "label": "address",
             "numberOfBytes": "20"
           },
-          "t_array(t_struct(TimeFrame)2773_storage)dyn_storage": {
+          "t_array(t_struct(TimeFrame)2745_storage)dyn_storage": {
             "label": "struct IBinaryMarket.TimeFrame[]",
             "numberOfBytes": "32"
           },
@@ -1593,11 +1410,11 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IBinaryConfig)2728": {
+          "t_contract(IBinaryConfig)2700": {
             "label": "contract IBinaryConfig",
             "numberOfBytes": "20"
           },
-          "t_contract(IBinaryVault)2928": {
+          "t_contract(IBinaryVault)2900": {
             "label": "contract IBinaryVault",
             "numberOfBytes": "20"
           },
@@ -1605,11 +1422,11 @@
             "label": "contract IERC20Upgradeable",
             "numberOfBytes": "20"
           },
-          "t_contract(IOracle)2972": {
+          "t_contract(IOracle)2944": {
             "label": "contract IOracle",
             "numberOfBytes": "20"
           },
-          "t_enum(Position)2758": {
+          "t_enum(Position)2730": {
             "label": "enum IBinaryMarket.Position",
             "members": [
               "Bull",
@@ -1621,15 +1438,15 @@
             "label": "mapping(address => uint256[])",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_address,t_struct(BetInfo)2766_storage)": {
+          "t_mapping(t_address,t_struct(BetInfo)2738_storage)": {
             "label": "mapping(address => struct IBinaryMarket.BetInfo)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_mapping(t_address,t_struct(BetInfo)2766_storage))": {
+          "t_mapping(t_uint256,t_mapping(t_address,t_struct(BetInfo)2738_storage))": {
             "label": "mapping(uint256 => mapping(address => struct IBinaryMarket.BetInfo))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Round)2755_storage)": {
+          "t_mapping(t_uint256,t_struct(Round)2727_storage)": {
             "label": "mapping(uint256 => struct IBinaryMarket.Round)",
             "numberOfBytes": "32"
           },
@@ -1641,11 +1458,11 @@
             "label": "mapping(uint8 => mapping(address => uint256[]))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint8,t_mapping(t_uint256,t_mapping(t_address,t_struct(BetInfo)2766_storage)))": {
+          "t_mapping(t_uint8,t_mapping(t_uint256,t_mapping(t_address,t_struct(BetInfo)2738_storage)))": {
             "label": "mapping(uint8 => mapping(uint256 => mapping(address => struct IBinaryMarket.BetInfo)))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint8,t_mapping(t_uint256,t_struct(Round)2755_storage))": {
+          "t_mapping(t_uint8,t_mapping(t_uint256,t_struct(Round)2727_storage))": {
             "label": "mapping(uint8 => mapping(uint256 => struct IBinaryMarket.Round))",
             "numberOfBytes": "32"
           },
@@ -1657,12 +1474,12 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(BetInfo)2766_storage": {
+          "t_struct(BetInfo)2738_storage": {
             "label": "struct IBinaryMarket.BetInfo",
             "members": [
               {
                 "label": "position",
-                "type": "t_enum(Position)2758",
+                "type": "t_enum(Position)2730",
                 "offset": 0,
                 "slot": "0"
               },
@@ -1681,7 +1498,7 @@
             ],
             "numberOfBytes": "96"
           },
-          "t_struct(Round)2755_storage": {
+          "t_struct(Round)2727_storage": {
             "label": "struct IBinaryMarket.Round",
             "members": [
               {
@@ -1759,7 +1576,7 @@
             ],
             "numberOfBytes": "384"
           },
-          "t_struct(TimeFrame)2773_storage": {
+          "t_struct(TimeFrame)2745_storage": {
             "label": "struct IBinaryMarket.TimeFrame",
             "members": [
               {
@@ -1786,6 +1603,169 @@
           "t_uint16": {
             "label": "uint16",
             "numberOfBytes": "2"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "275ddf67e89103757366a544328765f285ecefeb30ca486eaa1d3f74e4149df9": {
+      "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+      "txHash": "0x8869d4e259fee76b41ad3b24545d003eb1d40ce34f93d9096dbd25ab64c25f8a",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "config",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_contract(IBinaryConfig)1782",
+            "contract": "BinaryVault",
+            "src": "contracts\\binary\\BinaryVault.sol:27"
+          },
+          {
+            "label": "vaultId",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_uint256",
+            "contract": "BinaryVault",
+            "src": "contracts\\binary\\BinaryVault.sol:29"
+          },
+          {
+            "label": "underlyingToken",
+            "offset": 0,
+            "slot": "153",
+            "type": "t_contract(IERC20Upgradeable)487",
+            "contract": "BinaryVault",
+            "src": "contracts\\binary\\BinaryVault.sol:30"
+          },
+          {
+            "label": "whitelistedMarkets",
+            "offset": 0,
+            "slot": "154",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "BinaryVault",
+            "src": "contracts\\binary\\BinaryVault.sol:33"
+          },
+          {
+            "label": "stakedAmounts",
+            "offset": 0,
+            "slot": "155",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "contract": "BinaryVault",
+            "src": "contracts\\binary\\BinaryVault.sol:36"
+          },
+          {
+            "label": "totalStaked",
+            "offset": 0,
+            "slot": "156",
+            "type": "t_uint256",
+            "contract": "BinaryVault",
+            "src": "contracts\\binary\\BinaryVault.sol:38"
+          },
+          {
+            "label": "feeAccrued",
+            "offset": 0,
+            "slot": "157",
+            "type": "t_uint256",
+            "contract": "BinaryVault",
+            "src": "contracts\\binary\\BinaryVault.sol:39"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IBinaryConfig)1782": {
+            "label": "contract IBinaryConfig",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20Upgradeable)487": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)",
+            "numberOfBytes": "32"
           },
           "t_uint256": {
             "label": "uint256",
