@@ -3,7 +3,7 @@ import { loadFixture } from "ethereum-waffle"
 import { ethers, network } from "hardhat"
 import { marketFixture } from "./fixture"
 
-describe.only("Binary Option Trading - Market", () => {
+describe("Binary Option Trading - Market", () => {
     describe("Execute Round", async () => {
         it("Should reverted when not operator: ", async () => {
             const {market, operator, notOperator} = await loadFixture(marketFixture);
