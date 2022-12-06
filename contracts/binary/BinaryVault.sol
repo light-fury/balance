@@ -37,7 +37,7 @@ contract BinaryVault is
     uint256 public feeAccrued;
     
     address public adminAddress;
-
+    address public vaultManager;
     modifier onlyMarket() {
         if (!whitelistedMarkets[msg.sender]) revert NOT_FROM_MARKET(msg.sender);
         _;
@@ -237,5 +237,14 @@ contract BinaryVault is
     function setAdmin(address _newAdmin) external onlyAdmin {
         require(_newAdmin != address(0), "Invalid address");
         adminAddress = _newAdmin;
+    }
+
+    /**
+    * @dev change vault manager address
+    */
+    function setVaultManager(address _newManager) external onlyAdmin {
+        require(_newManager != address(0), "Invalid address");
+        vaultManager = _newManager;
+        setApprovalForAll(_newManager, true);
     }
 }

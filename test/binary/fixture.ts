@@ -38,7 +38,7 @@ export async function marketFixture() {
     await vaultManager.deployed();
 
     await vaultManager.createNewVault(
-      "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address, false
+      "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address
     );
     
     const vaultAddress = await vaultManager.vaults(uToken.address);
@@ -73,4 +73,53 @@ export async function marketFixture() {
     await uToken.connect(owner).transfer(vault.address, ethers.utils.parseEther("50"));
 
     return {owner, operator, notOperator, oracle, uToken, config, vault, market};
+}
+
+export async function vaultFixture() {
+    let owner: SignerWithAddress;
+    let operator: SignerWithAddress;
+    let notOperator: SignerWithAddress;
+    let treasury: SignerWithAddress;
+
+    let oracle: Oracle;
+    let uToken: MockERC20;
+    let config: BinaryConfig;
+    let uToken_other: MockERC20;
+
+    // get wallets
+    [owner, operator, notOperator, treasury] = await ethers.getSigners();
+
+    // deploy mock erc20 contract
+    const MockERC20 = await ethers.getContractFactory('MockERC20')
+    uToken = await MockERC20.deploy();
+    await uToken.deployed();
+
+    // deploy another mock erc20 contract
+    uToken_other = await MockERC20.deploy();
+    await uToken_other.deployed();
+
+    // deploy oracle
+    const OracleFactory = await ethers.getContractFactory("Oracle");
+    oracle = await OracleFactory.deploy();
+    await oracle.deployed();
+
+    // deploy binary config
+    const ConfigFactory = await ethers.getContractFactory("BinaryConfig")
+    config = await ConfigFactory.deploy(1000, 86400, treasury.address);
+    await config.deployed();
+
+    // deploy binary vault
+    const VaultManagerFactory = await ethers.getContractFactory("BinaryVaultManager");
+    const vaultManager = await VaultManagerFactory.deploy();
+    await vaultManager.deployed();
+
+    // deploy other vault
+    const VaultFactory = await ethers.getContractFactory("BinaryVault");
+    const other_vault = <BinaryVault>await VaultFactory.deploy(
+      "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address, owner.address
+    );
+    await other_vault.deployed();
+
+    return {owner, operator, notOperator, oracle, uToken, config, vaultManager, uToken_other, other_vault};
+
 }

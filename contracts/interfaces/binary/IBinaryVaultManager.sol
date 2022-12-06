@@ -8,8 +8,7 @@ interface IBinaryVaultManager {
         string memory symbol_,
         uint256 vaultId_,
         address underlyingToken_,
-        address config_,
-        bool isMigrate
+        address config_
     ) external;
 
     function stake(address uToken, uint256 amount) external;
