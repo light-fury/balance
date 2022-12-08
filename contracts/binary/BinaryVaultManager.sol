@@ -14,7 +14,15 @@ contract BinaryVaultManager is Ownable, IBinaryVaultManager {
     mapping(address => IBinaryVault) public vaults;
     address[] public underlyingTokens;
 
-    event NewVaultCreated(address indexed vault, address indexed underlyingToken);
+    event NewVaultCreated(
+        address indexed vault, 
+        address indexed underlyingToken,
+        string name,
+        string symbol,
+        uint256 vaultId,
+        address config,
+        address owner
+    );
 
     function createNewVault(
         string memory name_,
@@ -36,13 +44,21 @@ contract BinaryVaultManager is Ownable, IBinaryVaultManager {
         );
 
         _addVault(underlyingToken_, address(_newVault));
+        
+        emit NewVaultCreated(
+            address(_newVault), 
+            underlyingToken_,
+            name_,
+            symbol_,
+            vaultId_,
+            config_,
+            msg.sender
+        );
     }
 
     function _addVault(address uToken, address vault) private {
-      
         vaults[uToken] = IBinaryVault(vault);
         underlyingTokens.push(uToken);
-        emit NewVaultCreated(vault, uToken);
     }
 
     function stake(address uToken, uint256 amount) external override {

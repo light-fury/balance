@@ -9,8 +9,6 @@ interface IBinaryVault {
 
     event Unstaked(address user, uint256 amount);
 
-    event Betted(address user, uint256 amount);
-
     event Claimed(address user, uint256 amount);
 
     function underlyingToken() external view returns (IERC20);

@@ -75,7 +75,7 @@ contract BinaryMarket is
         string indexed marketName,
         address user,
         uint256 amount,
-        uint256 timeframeId,
+        uint8 timeframeId,
         uint256 roundId,
         Position position
     );
@@ -83,7 +83,7 @@ contract BinaryMarket is
     event Claimed(
         string indexed marketName,
         address indexed user,
-        uint256 timeframeId,
+        uint8 timeframeId,
         uint256 indexed roundId,
         uint256 amount
     );

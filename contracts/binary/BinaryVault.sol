@@ -226,8 +226,6 @@ contract BinaryVault is
 
         uint256 claimAmount = _cutTradingFee(amount);
         underlyingToken.safeTransfer(user, claimAmount);
-
-        emit Claimed(user, amount);
     }
 
     /**

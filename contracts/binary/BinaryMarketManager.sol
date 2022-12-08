@@ -20,7 +20,18 @@ contract BinaryMarketManager is
     }
 
     MarketData[] public allMarkets;
-    event MarketCreated(address indexed market, address indexed creator);
+    
+    event MarketCreated(
+        address indexed market, 
+        address indexed creator, 
+        address oracle, 
+        address vault, 
+        string name,
+        uint256 bufferBlocks,
+        address admin,
+        address operator,
+        uint minBetAmount
+    );
 
     constructor() Ownable() {}
 
@@ -53,6 +64,16 @@ contract BinaryMarketManager is
             )
         );
 
-        emit MarketCreated(address(newMarket), msg.sender);
+        emit MarketCreated(
+            address(newMarket), 
+            msg.sender, 
+            address(oracle_),
+            address(vault_),
+            marketName_,
+            bufferBlocks_,
+            adminAddress_,
+            operatorAddress_,
+            minBetAmount_
+        );
     }
 }
