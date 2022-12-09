@@ -11,7 +11,6 @@ interface IBinaryMarketManager {
         IOracle oracle_,
         IBinaryVault vault_,
         string memory marketName_,
-        uint256 _bufferBlocks,
         IBinaryMarket.TimeFrame[] memory timeframes_,
         address adminAddress_,
         address operatorAddress_,

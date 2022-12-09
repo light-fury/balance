@@ -10,7 +10,7 @@ describe.only("Binary Option Trading - Market", () => {
             const latestBlock = await ethers.provider.getBlock("latest");
             
             await expect(
-                market.connect(notOperator).executeRound([0], 1000, latestBlock.timestamp)
+                market.connect(notOperator).executeRound([0], 1000)
             ).to.be.revertedWith("operator: wut?");
         });
 
@@ -20,7 +20,7 @@ describe.only("Binary Option Trading - Market", () => {
             await market.connect(operator).setPause(true);
 
             await expect(
-                market.connect(operator).executeRound([0], 1000, latestBlock.timestamp)
+                market.connect(operator).executeRound([0], 1000)
             ).to.be.revertedWith("Pausable: paused");
             await market.connect(operator).setPause(false);
         });
@@ -30,7 +30,7 @@ describe.only("Binary Option Trading - Market", () => {
             const latestBlock = await ethers.provider.getBlock("latest");
 
             await expect(
-                market.connect(operator).executeRound([0], 1000, latestBlock.timestamp)
+                market.connect(operator).executeRound([0], 1000)
             ).to.be.revertedWith("Can only run after genesisStartRound is triggered");
         });
 
@@ -52,7 +52,7 @@ describe.only("Binary Option Trading - Market", () => {
             await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
             const latestBlock = await ethers.provider.getBlock("latest");
 
-            await market.connect(operator).executeRound([0], 1000, latestBlock.timestamp);
+            await market.connect(operator).executeRound([0], 1000);
             expect(await market.currentEpochs(0)).to.be.equal(3);
             expect(await market.oracleLatestRoundId()).to.be.equal(2);
         });
@@ -102,7 +102,7 @@ describe.only("Binary Option Trading - Market", () => {
             console.log("executableTimeframes: ", executableTimeframes);
             expect(executableTimeframes.split(",")[0]).to.be.equal('0');
 
-            await market.connect(operator).executeRound([0], 1005, latestBlock.timestamp);
+            await market.connect(operator).executeRound([0], 1005);
             const currentEpoch = await market.currentEpochs(0);
             const round = await market.rounds(0, currentEpoch.toNumber() - 1);
             expect((await market.rounds(0, currentEpoch.toNumber() - 1)).lockPrice).to.be.equal(1005);
@@ -115,7 +115,7 @@ describe.only("Binary Option Trading - Market", () => {
             // move block
             await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
 
-            await market.connect(operator).executeRound([0], 1008, latestBlock.timestamp);
+            await market.connect(operator).executeRound([0], 1008);
             const currentEpoch = await market.currentEpochs(0);
             const round = await market.rounds(0, currentEpoch.toNumber() - 1);
             expect((await market.rounds(0, currentEpoch.toNumber() - 2)).closePrice).to.be.equal(1008);
@@ -125,7 +125,7 @@ describe.only("Binary Option Trading - Market", () => {
             const {market, owner, uToken, operator} = await loadFixture(marketFixture);
             const latestBlock = await ethers.provider.getBlock("latest");
 
-            await expect(market.connect(operator).executeRound([0], 1008, latestBlock.timestamp)).to.be.revertedWith("Can only lock round after lockBlock");
+            await expect(market.connect(operator).executeRound([0], 1008)).to.be.revertedWith("Can only lock round after lockBlock");
         });
     });
 
@@ -170,5 +170,63 @@ describe.only("Binary Option Trading - Market", () => {
             await expect(market.connect(notOperator).claim(0, epoch.add(3))).to.be.revertedWith('Round has not started');
         });
         
+    });
+
+    describe("Execute Round - (2)", () => {
+        it("Should be able to execute after long time", async () => {
+            const {market, notOperator, uToken, operator} = await loadFixture(marketFixture);
+            await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
+            const currentEpoch = await market.currentEpochs(0);
+            await market.connect(operator).executeRound([0], 1010);
+            expect(await market.currentEpochs(0)).to.be.equal(currentEpoch.add(1));
+
+            await network.provider.send("hardhat_mine", ["0x3e8"]); // min 1000 blocks
+            await market.connect(operator).executeRound([0], 1010);
+            expect(await market.currentEpochs(0)).to.be.equal(currentEpoch.add(2));
+        })
+    });
+
+    describe("Place Bet - (2)", () => {
+        it("Should be able to bet after long time", async () => {
+            const {market, notOperator, uToken, operator} = await loadFixture(marketFixture);
+            await network.provider.send("hardhat_mine", ["0x3e8"]); // min 1000 blocks
+            // not necessary to call execute round
+            expect(await market.connect(notOperator).isNecessaryToExecute(0)).to.be.equal(false);
+            await market.connect(notOperator).openPosition(ethers.utils.parseEther("0.1"), 0, 0); // bet to bull
+            expect(await market.isNecessaryToExecute(0)).to.be.equal(true);
+
+            const currentEpoch = await market.currentEpochs(0);
+            await market.connect(operator).executeRound([0], 1020);
+
+            // no need since not reached to lock block or end block
+            expect(await market.isNecessaryToExecute(0)).to.be.equal(false);
+
+            await network.provider.send("hardhat_mine", ["0x10"]); // min 16 blocks
+
+            expect((await market.rounds(0, currentEpoch)).lockPrice).to.be.equal(1020);
+            expect((await market.rounds(0, currentEpoch)).oracleCalled).to.be.equal(false);
+
+            expect((await market.rounds(0, currentEpoch.sub(1))).closePrice).to.be.equal(1020);
+            expect((await market.rounds(0, currentEpoch.sub(1))).lockPrice).to.be.equal(1010);
+            expect((await market.rounds(0, currentEpoch.sub(1))).oracleCalled).to.be.equal(true);
+            expect(await market.isNecessaryToExecute(0)).to.be.equal(true);
+
+        });
+
+        it("No need to execute round if both current round and prev round has no bet", async () => {
+            const {market, notOperator, uToken, operator} = await loadFixture(marketFixture);
+            await network.provider.send("hardhat_mine", ["0x100"]); // min 160 blocks
+
+            // still necessary since prev round (active) has not been ended
+            expect(await market.isNecessaryToExecute(0)).to.be.equal(true);
+
+            await market.connect(operator).executeRound([0], 1000);
+
+            // not necessary
+            expect(await market.isNecessaryToExecute(0)).to.be.equal(false);
+            await network.provider.send("hardhat_mine", ["0x100"]); // min 160 blocks
+            expect(await market.isNecessaryToExecute(0)).to.be.equal(false);
+
+        });
     });
 })

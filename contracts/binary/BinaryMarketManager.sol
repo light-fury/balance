@@ -27,7 +27,6 @@ contract BinaryMarketManager is
         address oracle, 
         address vault, 
         string name,
-        uint256 bufferBlocks,
         address admin,
         address operator,
         uint minBetAmount
@@ -39,7 +38,6 @@ contract BinaryMarketManager is
         IOracle oracle_,
         IBinaryVault vault_,
         string memory marketName_,
-        uint256 bufferBlocks_,
         IBinaryMarket.TimeFrame[] memory timeframes_,
         address adminAddress_,
         address operatorAddress_,
@@ -50,7 +48,6 @@ contract BinaryMarketManager is
             oracle_,
             vault_,
             marketName_,
-            bufferBlocks_,
             timeframes_,
             adminAddress_,
             operatorAddress_,
@@ -70,7 +67,6 @@ contract BinaryMarketManager is
             address(oracle_),
             address(vault_),
             marketName_,
-            bufferBlocks_,
             adminAddress_,
             operatorAddress_,
             minBetAmount_

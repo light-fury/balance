@@ -50,7 +50,7 @@ export async function marketFixture() {
 
     // deploy binary market
     await marketManager.createMarket(
-        oracle.address, vault.address, "BTC/USDC Market", "100", [{
+        oracle.address, vault.address, "BTC/USDC Market", [{
             id: 0,
             interval: 60, // 60s = 1m,
             intervalBlocks: 10, // 60s means 10 blocks

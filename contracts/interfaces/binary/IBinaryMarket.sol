@@ -11,7 +11,7 @@ interface IBinaryMarket {
     struct TimeFrame {
         uint8 id;
         uint256 interval;
-        uint16 intervalBlocks;
+        uint256 intervalBlocks;
     }
 
     function openPosition(
@@ -27,8 +27,7 @@ interface IBinaryMarket {
 
     function executeRound(
         uint8[] memory timeframeIds,
-        uint256 price,
-        uint256 timestamp
+        uint256 price
     ) external;
 
     function getExecutableTimeframes() external view returns(string memory);

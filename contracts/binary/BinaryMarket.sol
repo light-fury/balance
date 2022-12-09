@@ -63,7 +63,6 @@ contract BinaryMarket is
 
     /// @dev This should be modified
     uint256 public minBetAmount;
-    uint256 public bufferBlocks;
     uint256 public oracleLatestRoundId;
 
     address public adminAddress;
@@ -110,10 +109,6 @@ contract BinaryMarket is
         address indexed oldVault,
         address indexed newVault
     );
-    event BufferBlocksChanged(
-        uint256 oldBufferBlocks,
-        uint256 newBufferBlocks
-    );
     event MarketNameChanged(
         string oldName,
         string newName
@@ -154,7 +149,6 @@ contract BinaryMarket is
         IOracle oracle_,
         IBinaryVault vault_,
         string memory marketName_,
-        uint256 _bufferBlocks,
         TimeFrame[] memory timeframes_,
         address adminAddress_,
         address operatorAddress_,
@@ -166,7 +160,6 @@ contract BinaryMarket is
 
         oracle = oracle_;
         vault = vault_;
-        bufferBlocks = _bufferBlocks;
 
         marketName = marketName_;
         adminAddress = adminAddress_;
@@ -202,17 +195,6 @@ contract BinaryMarket is
         if (address(vault_) == address(0)) revert ZERO_ADDRESS();
         emit VaultChanged(address(vault), address(vault_));
         vault = vault_;
-    }
-
-    /**
-     * @notice Set buffer blocks of this market
-     * @dev Only owner can set the buffer blocks
-     * @param bufferBlocks_ New bufferblocks to set
-     */
-    function setBufferBlocks(uint256 bufferBlocks_) external onlyAdmin {
-        require(bufferBlocks_ > 0, "Invalid size");
-        emit BufferBlocksChanged(bufferBlocks, bufferBlocks_);
-        bufferBlocks = bufferBlocks_;
     }
 
     /**
@@ -265,7 +247,6 @@ contract BinaryMarket is
 
     /**
      * @dev Get latest recorded price from oracle
-     * If it falls below allowed buffer or has not updated, it would be invalid
      */
     function _getPriceFromOracle() internal returns (uint256, uint256, uint256) {
         (uint256 roundId, uint256 timestamp, uint256 price, ) = oracle.latestRoundData();
@@ -318,13 +299,13 @@ contract BinaryMarket is
      */
     function executeRound(
         uint8[] memory timeframeIds,
-        uint256 price,
-        uint256 timestamp
+        uint256 price
     ) external onlyOperator whenNotPaused {
         require(
             genesisStartOnce,
             "Can only run after genesisStartRound is triggered"
         );
+        uint256 timestamp = block.timestamp;
         // Update oracle price
         _writeOraclePrice(timestamp, price);
 
@@ -332,29 +313,29 @@ contract BinaryMarket is
 
         for (uint8 i = 0; i < timeframeIds.length; i = i + 1) {
             uint8 timeframeId = timeframeIds[i];
-            require(
-                genesisLockOnces[timeframeId],
-                "Can only run after genesisLockOnce is triggered"
-            );
-            uint256 currentEpoch = currentEpochs[timeframeId];
-            // CurrentEpoch refers to previous round (n-1)
-            _safeLockRound(
-                timeframeId,
-                currentEpoch,
-                currentRoundId,
-                currentPrice
-            );
-            _safeEndRound(
-                timeframeId,
-                currentEpoch - 1,
-                currentRoundId,
-                currentPrice
-            );
+            if(genesisLockOnces[timeframeId]) {
 
-            // Increment currentEpoch to current round (n)
-            currentEpoch = currentEpoch + 1;
-            currentEpochs[timeframeId] = currentEpoch;
-            _safeStartRound(timeframeId, currentEpoch);
+                uint256 currentEpoch = currentEpochs[timeframeId];
+                // CurrentEpoch refers to previous round (n-1)
+                _safeLockRound(
+                    timeframeId,
+                    currentEpoch,
+                    currentRoundId,
+                    currentPrice
+                );
+                _safeEndRound(
+                    timeframeId,
+                    currentEpoch - 1,
+                    currentRoundId,
+                    currentPrice
+                );
+
+                // Increment currentEpoch to current round (n)
+                currentEpoch = currentEpoch + 1;
+                currentEpochs[timeframeId] = currentEpoch;
+                _safeStartRound(timeframeId, currentEpoch);
+            }
+
         }
     }
 
@@ -363,12 +344,6 @@ contract BinaryMarket is
      * Previous round n-2 must end
      */
     function _safeStartRound(uint8 timeframeId, uint256 epoch) internal {
-        require(genesisStartOnce, "Can only run after genesisStartRound is triggered");
-
-        require(
-            rounds[timeframeId][epoch - 2].closeBlock != 0,
-            "Can only start round after round n-2 has ended"
-        );
         require(
             block.number >= rounds[timeframeId][epoch - 2].closeBlock,
             "Can only start new round after round n-2 closeBlock"
@@ -404,10 +379,6 @@ contract BinaryMarket is
             block.number >= rounds[timeframeId][epoch].lockBlock,
             "Can only lock round after lockBlock"
         );
-        require(
-            block.number <= rounds[timeframeId][epoch].lockBlock + bufferBlocks,
-            "Can only lock round within bufferBlocks"
-        );
         _lockRound(timeframeId, epoch, roundId, price);
     }
 
@@ -440,11 +411,6 @@ contract BinaryMarket is
         require(
             block.number >= rounds[timeframeId][epoch].closeBlock,
             "Can only end round after closeBlock"
-        );
-        require(
-            block.number <=
-                rounds[timeframeId][epoch].closeBlock + bufferBlocks,
-            "Can only end round within bufferBlocks"
         );
         _endRound(timeframeId, epoch, roundId, price);
     }
@@ -613,8 +579,8 @@ contract BinaryMarket is
         return
             rounds[timeframeId][epoch].startBlock != 0 &&
             rounds[timeframeId][epoch].lockBlock != 0 &&
-            block.number > rounds[timeframeId][epoch].startBlock &&
-            block.number < rounds[timeframeId][epoch].lockBlock;
+            rounds[timeframeId][epoch].lockPrice == 0 &&
+            block.number > rounds[timeframeId][epoch].startBlock;
     }
 
     /**
@@ -629,7 +595,7 @@ contract BinaryMarket is
         Round memory round = rounds[timeframeId][epoch];
         return
             !round.oracleCalled &&
-            block.number > round.closeBlock + bufferBlocks &&
+            block.number > round.closeBlock &&
             betInfo.amount != 0;
     }
 
@@ -658,34 +624,33 @@ contract BinaryMarket is
         minBetAmount = _minBetAmount;
     }
 
+    function isNecessaryToExecute(uint8 timeframeId) public view returns(bool) {
+        if (!genesisLockOnces[timeframeId] || !genesisStartOnce) {
+            return false;
+        }
+
+        uint256 currentEpoch = currentEpochs[timeframeId];
+        Round memory round = rounds[timeframeId][currentEpoch];
+        Round memory prevRound = rounds[timeframeId][currentEpoch - 1];
+
+        bool lockable = round.startBlock != 0 && round.lockPrice == 0 && block.number >= round.lockBlock;
+        bool closable = prevRound.lockBlock !=0 && prevRound.closePrice == 0 && !prevRound.oracleCalled && block.number >= prevRound.closeBlock;
+
+        return lockable && closable && (prevRound.totalAmount > 0 || round.totalAmount > 0);
+    }
+
     /**
         @dev check if bet is active
      */
 
     function getExecutableTimeframes() external view returns(string memory) {
         string memory result = "";
-        
-        if (!genesisStartOnce) {
-            return result;
-        }
         uint256 count = 0;
 
         for (uint256 i = 0; i < timeframes.length; i = i + 1) {
             uint8 timeframeId = timeframes[i].id;
 
-            if (!genesisLockOnces[timeframeId]) {
-                continue;
-            }
-
-            uint256 currentEpoch = currentEpochs[timeframeId];
-            Round memory round = rounds[timeframeId][currentEpoch];
-            Round memory prevRound = rounds[timeframeId][currentEpoch - 1];
-
-            bool lockable = round.startBlock != 0 && block.number >= round.lockBlock && block.number <= round.lockBlock + bufferBlocks;
-
-            bool closable = prevRound.lockBlock !=0 && block.number >= prevRound.closeBlock && block.number <= prevRound.closeBlock + bufferBlocks;
-
-            if ((!prevRound.oracleCalled || round.totalAmount > 0) && lockable && closable) {
+            if (isNecessaryToExecute(timeframeId)) {
                 if (count > 0) {
                     result = string.concat(",", result, Strings.toString(timeframeId));
                 } else {
