@@ -102,6 +102,32 @@ contract BinaryMarket is
         uint256 price
     );
 
+    event OracleChanged(
+        address indexed oldOracle,
+        address indexed newOracle
+    );
+    event VaultChanged(
+        address indexed oldVault,
+        address indexed newVault
+    );
+    event BufferBlocksChanged(
+        uint256 oldBufferBlocks,
+        uint256 newBufferBlocks
+    );
+    event MarketNameChanged(
+        string oldName,
+        string newName
+    );
+    event AdminChanged(
+        address indexed oldAdmin,
+        address indexed newAdmin
+    );
+    event OperatorChanged(
+        address indexed oldOperator,
+        address indexed newOperator
+    );
+
+
     /// @dev timeframe id => genesis locked?
     mapping(uint8 => bool) public genesisLockOnces;
 
@@ -147,7 +173,7 @@ contract BinaryMarket is
         operatorAddress = operatorAddress_;
         minBetAmount = minBetAmount_;
 
-        for (uint8 i = 0; i < timeframes_.length; i = i + 1) {
+        for (uint256 i = 0; i < timeframes_.length; i = i + 1) {
             timeframes.push(timeframes_[i]);
             genesisLockOnces[timeframes_[i].id] = false;
         }
@@ -163,7 +189,78 @@ contract BinaryMarket is
      */
     function setOracle(IOracle oracle_) external onlyAdmin {
         if (address(oracle_) == address(0)) revert ZERO_ADDRESS();
+        emit OracleChanged(address(oracle), address(oracle_));
         oracle = oracle_;
+    }
+
+    /**
+     * @notice Set vault of underlying token of this market
+     * @dev Only owner can set the vault
+     * @param vault_ New vault address to set
+     */
+    function setVault(IBinaryVault vault_) external onlyAdmin {
+        if (address(vault_) == address(0)) revert ZERO_ADDRESS();
+        emit VaultChanged(address(vault), address(vault_));
+        vault = vault_;
+    }
+
+    /**
+     * @notice Set buffer blocks of this market
+     * @dev Only owner can set the buffer blocks
+     * @param bufferBlocks_ New bufferblocks to set
+     */
+    function setBufferBlocks(uint256 bufferBlocks_) external onlyAdmin {
+        require(bufferBlocks_ > 0, "Invalid size");
+        emit BufferBlocksChanged(bufferBlocks, bufferBlocks_);
+        bufferBlocks = bufferBlocks_;
+    }
+
+    /**
+     * @notice Set name of this market
+     * @dev Only owner can set name
+     * @param name_ New name to set
+     */
+    function setName(string memory name_) external onlyAdmin {
+        emit MarketNameChanged(marketName, name_);
+        marketName = name_;
+    }
+
+    /**
+     * @notice Set new admin of this market
+     * @dev Only owner can set new admin
+     * @param admin_ New admin to set
+     */
+    function setAdmin(address admin_) external onlyAdmin {
+        require(admin_ != address(0), "Zero address");
+        emit AdminChanged(adminAddress, admin_);
+        adminAddress = admin_;
+    }
+
+    /**
+     * @notice Set new operator of this market
+     * @dev Only admin can set new operator
+     * @param operator_ New operator to set
+     */
+    function setOperator(address operator_) external onlyAdmin {
+        require(operator_ != address(0), "Zero address");
+        emit OperatorChanged(operatorAddress, operator_);
+        operatorAddress = operator_;
+    }
+
+    /**
+     * @notice Set timeframes of this market
+     * @dev Only admin can set new timeframe, format genesis
+     * @param timeframes_ New timeframe to set
+     */
+    function setTimeframes(TimeFrame[] memory timeframes_) external onlyAdmin {
+        require(timeframes_.length > 0, "Invalid length");
+        genesisStartOnce = false;
+        
+        for (uint256 i = 0; i < timeframes_.length; i = i + 1) {
+            timeframes.push(timeframes_[i]);
+            genesisLockOnces[timeframes_[i].id] = false;
+        }
+        _unpause();
     }
 
     /**
@@ -181,7 +278,7 @@ contract BinaryMarket is
     }
 
     function _writeOraclePrice(uint256 timestamp, uint256 price) internal {
-        (uint256 roundId, uint256 currentTimestamp, , ) = oracle.latestRoundData();
+        (uint256 roundId, , , ) = oracle.latestRoundData();
         oracle.writePrice(roundId + 1, timestamp, price);
     }
 
@@ -544,6 +641,10 @@ contract BinaryMarket is
         if (value) {
             _pause();
         } else {
+            genesisStartOnce = false;
+            for (uint i; i < timeframes.length; i = i + 1) {
+                genesisLockOnces[timeframes[i].id] = false;
+            }
             _unpause();
         }
     }
@@ -595,5 +696,27 @@ contract BinaryMarket is
         }
 
         return result;
+    }
+
+    /**
+     * @dev Return round epochs that a user has participated in specific timeframe
+     */
+    function getUserRounds(
+        uint8 timeframeId,
+        address user,
+        uint256 cursor,
+        uint256 size
+    ) external view returns (uint256[] memory, uint256) {
+        uint256 length = size;
+        if (length > userRounds[timeframeId][user].length - cursor) {
+            length = userRounds[timeframeId][user].length - cursor;
+        }
+
+        uint256[] memory values = new uint256[](length);
+        for (uint256 i = 0; i < length; i++) {
+            values[i] = userRounds[timeframeId][user][cursor + i];
+        }
+
+        return (values, cursor + length);
     }
 }

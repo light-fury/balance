@@ -44,7 +44,7 @@ const config: HardhatUserConfig = {
       },
     }, */
     goerli: {
-      url: `https://eth-goerli.alchemyapi.io/v2/${alchemyApiKey}`,
+      url: `https://goerli.infura.io/v3/9156cc61e0b54f2e8063f8fd96da5d76`,
       accounts: [`${privateKey}`],
     },
     mainnet: {
