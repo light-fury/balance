@@ -14,6 +14,7 @@ contract Oracle is AccessControl, IOracle {
         uint256 price;
         address writer;
     }
+    // fixme can we get rid of roundid on oracle? Why do I care about roundid here, how to find which next roundid should I use
 
     bytes32 public constant WRITER_ROLE = keccak256("BALANCE_ORACLE_WRITER");
 
