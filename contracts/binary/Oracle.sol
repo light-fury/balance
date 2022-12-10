@@ -71,6 +71,7 @@ contract Oracle is AccessControl, IOracle {
     function setWriter(address writer, bool enable) external onlyAdmin {
         require(writer != address(0), "Invalid address");
         if (enable) {
+            // fixme can you require that it's disabled if you are doing enable 
             grantRole(WRITER_ROLE, writer);
         } else {
             revokeRole(WRITER_ROLE, writer);
