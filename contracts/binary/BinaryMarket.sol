@@ -177,6 +177,7 @@ contract BinaryMarket is
         }
 
         underlyingToken = vault.underlyingToken();
+        // fixme false is default
         genesisStartOnce = false;
     }
 
