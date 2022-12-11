@@ -1,242 +1,292 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { expect } from "chai";
-import { utils } from "ethers";
-import { ethers, upgrades } from "hardhat";
-import { BinaryConfig, BinaryVault, MockERC20 } from "../../typechain-types";
+import { loadFixture } from "ethereum-waffle";
+import { Contract, ethers } from "ethers";
+import { BinaryVault, BinaryVault__factory } from "../../typechain-types";
+import { vaultFixture, marketFixture } from "./fixture";
 
-describe("Binary Option Trading - Vault", () => {
-  let admin: SignerWithAddress;
-  let alice: SignerWithAddress;
-  let market: SignerWithAddress;
-  let treasury: SignerWithAddress;
+describe("Binary Option - Vault & Vault Manager Test", () => {
+    describe("Create New Vault", () => {
+        it("Should be reverted from not owner", async () => {
+            const {vaultManager, notOperator, owner, uToken, config} = await loadFixture(vaultFixture);
+            await expect(vaultManager.connect(notOperator).createNewVault("Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address)).to.be.revertedWith("Ownable: caller is not the owner");
+        });
 
-  let uToken: MockERC20;
-  let config: BinaryConfig;
-  let vault: BinaryVault;
+        it("Should be able to create new vault from owner", async () => {
+            const {vaultManager, notOperator, owner, uToken, config} = await loadFixture(vaultFixture);
+            await vaultManager.connect(owner).createNewVault("Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address);
+            const newVault = await vaultManager.vaults(uToken.address);
+            expect(await vaultManager.underlyingTokens(0)).to.be.equal(uToken.address);
+        });
+    });
 
-  before(async () => {
-    [admin, alice, market, treasury] = await ethers.getSigners();
+    describe("Whitelist market", () => {
+        it("Should be reverted from non owner", async () => {
+            const {vaultManager, notOperator, uToken, owner} = await loadFixture(vaultFixture);
+            const {market} = await loadFixture(marketFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            await expect(vault.connect(notOperator).whitelistMarket(market.address, true)).to.be.revertedWith("admin: wut?");
+        });
 
-    const MockERC20 = await ethers.getContractFactory('MockERC20')
-    uToken = await MockERC20.deploy();
-    await uToken.deployed();
+        it("Should be able to whitelist market from owner", async () => {
+            const {vaultManager, notOperator, uToken, owner} = await loadFixture(vaultFixture);
+            const {market} = await loadFixture(marketFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            expect(await vault.whitelistMarket(market.address, true))
+                .to
+                .emit(vault, "WhitelistMarketChanged")
+                .withArgs(market.address, true);
+            
+            expect(await vault.whitelistedMarkets(market.address)).to.be.equal(true);
 
-    const Config = await ethers.getContractFactory("BinaryConfig")
-    config = <BinaryConfig>await Config.deploy(1000, 86400, treasury.address);
-    await config.deployed();
-    await config.setTreasury(treasury.address);
-  })
-  beforeEach(async () => {
-    const VaultFactory = await ethers.getContractFactory("BinaryVault");
-    vault = <BinaryVault>await VaultFactory.deploy(
-      "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address, admin.address
-    );
-    await vault.deployed();
-  })
+        });
+    });
 
-  describe("Initializing", () => {
-    it("should revert deployment when invalid inputs provided", async () => {
-      const VaultFactory = await ethers.getContractFactory("BinaryVault");
-      await expect(
-        VaultFactory.deploy(
-          "Balance BTC/USDC Vault", "BTCUSDC", 0, ethers.constants.AddressZero, config.address, admin.address
-        )
-      ).to.be.revertedWith("ZERO_ADDRESS");
+    describe("Add New Liquidity", () => {
+        it("Should be reverted with zero address user or zero amount", async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
 
-      await expect(
-        VaultFactory.deploy(
-          "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, ethers.constants.AddressZero, admin.address
-        )
-      ).to.be.revertedWith("ZERO_ADDRESS");
-    })
+            await expect(vault.addNewLiquidityPosition("0x0000000000000000000000000000000000000000", ethers.utils.parseEther("1"))).to.be.revertedWith("ZERO_ADDRESS()");
+            await expect(vault.addNewLiquidityPosition(owner.address, ethers.utils.parseEther("0"))).to.be.revertedWith("ZERO_AMOUNT()");
+        });
 
-    it("should be able to deploy vault contract with valid inputs", async () => {
-      const VaultFactory = await ethers.getContractFactory("BinaryVault");
-      const vault = <BinaryVault>await VaultFactory.deploy(
-        "Balance BTC/USDC Vault", "BTCUSDC", 0, uToken.address, config.address, admin.address
-      );
+        it("Should be reverted with less than 10^3 amount token", async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
 
-      expect(await vault.underlyingToken()).to.be.equal(uToken.address);
-      expect(await vault.config()).to.be.equal(config.address);
-      expect(await vault.vaultId()).to.be.equal(0);
-    })
-  })
+            await uToken.connect(owner).approve(vault.address, ethers.utils.parseEther("1"));
+            await expect(vault.addNewLiquidityPosition(owner.address, ethers.utils.parseUnits("1", 2))).to.be.revertedWith("Insufficient amount");
+        });
 
-  describe("Owner", () => {
-    it("should be able to pause the vault", async () => {
-      expect(await vault.paused()).to.be.false;
+        it("Should be able to add liquidity with enough amount", async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
 
-      await expect(
-        vault.connect(alice).pauseVault()
-      ).to.be.revertedWith("admin: wut?");
+            expect(await vault.addNewLiquidityPosition(owner.address, ethers.utils.parseEther("1"))).to
+                .emit(vault, "NewLiquidityAdded")
+                .withArgs(owner.address, 0, ethers.utils.parseEther("1"), ethers.utils.parseEther("1"));
 
-      await vault.pauseVault();
-      expect(await vault.paused()).to.be.true;
-    })
-    it("should be able to unpause the vault", async () => {
-      await vault.pauseVault();
-      expect(await vault.paused()).to.be.true;
+            expect(await vault.totalShareSupply()).to.be.equal(ethers.utils.parseEther("1"));
+            expect(await vault.shareBalances(0)).to.be.equal(ethers.utils.parseEther("1"));
+            expect(await vault.ownerOf(0)).to.be.equal(owner.address);
+            expect((await vault.getSharesOfUser(owner.address)).shares).to.be.equal(ethers.utils.parseEther("1"));
+            expect((await vault.getSharesOfUser(owner.address)).underlyingTokenAmount).to.be.equal(ethers.utils.parseEther("1"));
+        });
+    });
 
-      await expect(
-        vault.connect(alice).unpauseVault()
-      ).to.be.revertedWith("admin: wut?");
+    describe("Add liquidity to existing position", () => {
+        it("Should be reverted with non exist token id", async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
 
-      await vault.unpauseVault();
-      expect(await vault.paused()).to.be.false;
-    })
-    it("should be able to whitelist/blacklist market", async () => {
-      expect(await vault.whitelistedMarkets(market.address)).to.be.false;
+            await expect(vault.addLiquidityPosition(owner.address, ethers.utils.parseEther("1"), 1)).to.be.revertedWith("Non exists token");
+        });
 
-      await expect(
-        vault.connect(alice).whitelistMarket(market.address, true)
-      ).to.be.revertedWith("admin: wut?");
+        it("Should be reverted from non owner or not approved user", async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
 
-      await expect(
-        vault.whitelistMarket(ethers.constants.AddressZero, true)
-      ).to.be.revertedWith("ZERO_ADDRESS");
+            await expect(vault.addLiquidityPosition(notOperator.address, ethers.utils.parseEther("1"), 0)).to.be.revertedWith("Not owner");
+            await expect(vault.connect(notOperator).addLiquidityPosition(owner.address, ethers.utils.parseEther("1"), 0)).to.be.revertedWith("Not approved or owner");
+        });
 
-      await vault.whitelistMarket(market.address, true);
-      expect(await vault.whitelistedMarkets(market.address)).to.be.true;
-    })
-  })
-  describe("Liquidity - Stake", async () => {
-    const stakeAmount = utils.parseEther("100");
-    beforeEach(async () => {
-      await uToken.transfer(alice.address, stakeAmount);
-      await uToken.connect(alice).approve(vault.address, stakeAmount);
-    })
+        it("Should be able to add liquidity from token owner",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
 
-    it("should revert staking when invalid inputs provided", async () => {
-      await expect(
-        vault.connect(alice).stake(ethers.constants.AddressZero, stakeAmount)
-      ).to.be.revertedWith("ZERO_ADDRESS");
+            await uToken.connect(owner).approve(vault.address, ethers.utils.parseEther("100"));
+            
+            expect(await vault.addLiquidityPosition(owner.address, ethers.utils.parseEther("1"), 0)).to
+                .emit(vault, "LiquidityAdded")
+                .withArgs(owner.address, 0, 1, ethers.utils.parseEther("1"), ethers.utils.parseEther("1"));
+            
+            expect(await vault.totalShareSupply()).to.be.equal(ethers.utils.parseEther("2"));
+            expect(await vault.shareBalances(0)).to.be.equal(ethers.utils.parseEther("0"));
+            expect(await vault.shareBalances(1)).to.be.equal(ethers.utils.parseEther("2"));
+            expect(await vault.ownerOf(1)).to.be.equal(owner.address);
+            expect((await vault.getSharesOfUser(owner.address)).shares).to.be.equal(ethers.utils.parseEther("2"));
+            expect((await vault.getSharesOfUser(owner.address)).underlyingTokenAmount).to.be.equal(ethers.utils.parseEther("2"));
+            // NFT total supply should be 1
+            expect(await vault.totalSupply()).to.be.equal(1);
+        });
 
-      await expect(
-        vault.connect(alice).stake(alice.address, 0)
-      ).to.be.revertedWith("ZERO_AMOUNT");
-    })
-    it("should revert staking when the vault is paused", async () => {
-      await vault.pauseVault();
-      await expect(
-        vault.connect(alice).stake(alice.address, stakeAmount)
-      ).to.be.revertedWith("Pausable: paused");
-    })
-    it("should be able to stake underlying tokens", async () => {
-      const beforeBalance = await uToken.balanceOf(alice.address);
-      await expect(
-        vault.connect(alice).stake(alice.address, stakeAmount)
-      ).to.be.emit(vault, "Staked").withArgs(
-        alice.address, 0, stakeAmount
-      );
-      const afterBalance = await uToken.balanceOf(alice.address);
+        it("Add new liquidity from other user",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            
+            await uToken.connect(owner).transfer(notOperator.address, ethers.utils.parseEther("10"));
+            await uToken.connect(notOperator).approve(vault.address, ethers.utils.parseEther("100"));
+            
+            expect(await vault.connect(notOperator).addNewLiquidityPosition(notOperator.address, ethers.utils.parseEther("1"))).to
+                .emit(vault, "NewLiquidityAdded")
+                .withArgs(notOperator.address, 2, ethers.utils.parseEther("1"), ethers.utils.parseEther("1"));
 
-      expect(beforeBalance.sub(afterBalance)).to.be.equal(stakeAmount);
-      expect(await uToken.balanceOf(vault.address)).to.be.equal(stakeAmount);
+                expect(await vault.totalShareSupply()).to.be.equal(ethers.utils.parseEther("3"));
+                expect(await vault.shareBalances(0)).to.be.equal(ethers.utils.parseEther("0"));
+                expect(await vault.shareBalances(1)).to.be.equal(ethers.utils.parseEther("2"));
+                expect(await vault.shareBalances(2)).to.be.equal(ethers.utils.parseEther("1"));
+                expect(await vault.ownerOf(1)).to.be.equal(owner.address);
+                expect(await vault.ownerOf(2)).to.be.equal(notOperator.address);
+                expect((await vault.getSharesOfUser(owner.address)).shares).to.be.equal(ethers.utils.parseEther("2"));
+                expect((await vault.getSharesOfUser(owner.address)).underlyingTokenAmount).to.be.equal(ethers.utils.parseEther("2"));
+                expect((await vault.getSharesOfUser(notOperator.address)).shares).to.be.equal(ethers.utils.parseEther("1"));
+                expect((await vault.getSharesOfUser(notOperator.address)).underlyingTokenAmount).to.be.equal(ethers.utils.parseEther("1"));
+                // NFT total supply should be 1
+                expect(await vault.totalSupply()).to.be.equal(2);
+        });
+    });
 
-      const tokenIds = await vault.tokensOfOwner(alice.address);
-      expect(tokenIds.length).to.be.equal(1);
-      expect(tokenIds[0]).to.be.equal(0);
+    describe("Remove liquidity from certain position", () => {
+        it("Should be reverted with zero amount",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            await expect(vault.removeLiquidityPosition(owner.address, 1, ethers.utils.parseEther("0"))).to.be.revertedWith("ZERO_AMOUNT()");
+        });
 
-      expect(await vault.totalStaked()).to.be.equal(stakeAmount);
-      expect(await vault.stakedAmounts(tokenIds[0])).to.be.equal(stakeAmount);
-    })
+        it("Should be reverted with non exists token id",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            await expect(vault.removeLiquidityPosition(owner.address, 3, ethers.utils.parseEther("1"))).to.be.revertedWith("Invalid token id");
+        });
 
-    it("should burn prev token and mint new one", async () => {
-      await vault.connect(alice).stake(alice.address, stakeAmount)
+        it("Should be reverted from not token owner",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            await expect(vault.removeLiquidityPosition(owner.address, 2, ethers.utils.parseEther("1"))).to.be.revertedWith("Not owner");
+        });
 
-      let tokenIds = await vault.tokensOfOwner(alice.address);
-      expect(tokenIds.length).to.be.equal(1);
-      expect(tokenIds[0]).to.be.equal(0);
+        it("Should be reverted with too much remove amount",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            await expect(vault.connect(notOperator).removeLiquidityPosition(notOperator.address, 2, ethers.utils.parseEther("2"))).to.be.revertedWith("Insufficient shares");
+        });
 
-      await uToken.connect(alice).approve(vault.address, stakeAmount);
-      await vault.connect(alice).stake(alice.address, stakeAmount);
+        it("Should be able to remove from token owner",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            const nextTokenId = await vault.nextTokenId();
 
-      tokenIds = await vault.tokensOfOwner(alice.address);
-      expect(tokenIds.length).to.be.equal(1);
-      expect(tokenIds[0]).to.be.equal(1); // tokenId increased
+            const prevBalance = await uToken.balanceOf(owner.address);
+            const prevVaultTokenBalance = await uToken.balanceOf(vault.address);
+            const prevTotalSupply = await vault.totalSupply()
+            const prevTotalShareSupply = await vault.totalShareSupply();
 
-      expect(await vault.totalStaked()).to.be.equal(stakeAmount.mul(2));
-      expect(await vault.stakedAmounts(tokenIds[0])).to.be.equal(stakeAmount.mul(2));
-    })
-  })
+            expect(await vault.connect(owner).removeLiquidityPosition(owner.address, 1, ethers.utils.parseEther("1"))).to
+                .emit(vault, "LiquidityRemovedFromPosition")
+                .withArgs(owner.address, 1, ethers.utils.parseEther("1"), ethers.utils.parseEther("1"), nextTokenId, ethers.utils.parseEther("1"));
+            
+            expect(await uToken.balanceOf(owner.address)).to.be.equal(prevBalance.add(ethers.utils.parseEther("1")));
+            expect(await uToken.balanceOf(vault.address)).to.be.equal(prevVaultTokenBalance.sub(ethers.utils.parseEther("1")));
+            expect(await vault.shareBalances(nextTokenId)).to.be.equal(ethers.utils.parseEther("1"));
+            expect(await vault.shareBalances(1)).to.be.equal(ethers.utils.parseEther("0"));
+            expect(await vault.totalShareSupply()).to.be.equal(prevTotalShareSupply.sub(ethers.utils.parseEther("1")));
+            expect(await vault.totalSupply()).to.be.equal(prevTotalSupply);
+        });
 
-  describe("Liquidity - Unstake", () => {
-    const stakeAmount = utils.parseEther("1");
-    beforeEach(async () => {
-      await uToken.approve(vault.address, stakeAmount);
-      await vault.stake(admin.address, stakeAmount);
-    })
+        it("Should be burnt if remove all shares",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            const tokenIds = await vault.tokensOfOwner(owner.address);
+            const shareAmount = await vault.shareBalances(tokenIds[0]);
 
-    it("should revert unstaking when invalid inputs provided", async () => {
-      await expect(
-        vault.unstake(admin.address, 0)
-      ).to.be.revertedWith("ZERO_AMOUNT");
-      await expect(
-        vault.unstake(ethers.constants.AddressZero, stakeAmount)
-      ).to.be.revertedWith("ZERO_ADDRESS");
-    })
-    it("should revert unstaking when the vault is paused", async () => {
-      await vault.pauseVault();
-      await expect(
-        vault.unstake(admin.address, stakeAmount)
-      ).to.be.revertedWith("Pausable: paused");
-    })
-    it("should revert when there is no holding NFTs", async () => {
-      await expect(
-        vault.connect(alice).unstake(alice.address, stakeAmount)
-      ).to.be.revertedWith(`NO_DEPOSIT("${alice.address}")`);
-    })
-    it("should approve NFTs first before unstake", async () => {
-      const balance = await vault.balanceOf(admin.address);
-      expect(balance).to.be.equal(1);
-      await expect(
-        vault.connect(alice).unstake(admin.address, stakeAmount)
-      ).to.be.revertedWith("TransferCallerNotOwnerNorApproved");
-    })
-    it("should revert when unstaking amount greater than deposited amount", async () => {
-      const tokenIds = await vault.tokensOfOwner(admin.address);
-      const stakedBalance = await vault.stakedAmounts(tokenIds[0]);
-      await expect(
-        vault.unstake(admin.address, stakedBalance.mul(2))
-      ).to.be.revertedWith("EXCEED_BALANCE");
-    })
-    it("should burn NFTs and mint new one when there is some left", async () => {
-      let tokenIds = await vault.tokensOfOwner(admin.address);
-      expect(tokenIds.length).to.be.equal(1);
+            const prevTotalSupply = await vault.totalSupply();
+            await vault.removeLiquidityPosition(owner.address, tokenIds[0], shareAmount);
 
-      const beforeBalance = await uToken.balanceOf(admin.address);
-      const stakedBalance = await vault.stakedAmounts(tokenIds[0]);
-      await expect(
-        vault.unstake(admin.address, stakedBalance.div(2))
-      ).to.be.emit(vault, "Unstaked").withArgs(admin.address, stakedBalance.div(2));
-      const afterBalance = await uToken.balanceOf(admin.address);
+            expect(await vault.totalSupply()).to.be.equal(prevTotalSupply.sub(1));
+        });
+    });
 
-      expect(afterBalance.sub(beforeBalance)).to.be.equal(stakedBalance.div(2));
+    describe("Remove liquidity", () => {
+        it("Should be reverted with zero amount",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            await expect(vault.removeLiquidity(owner.address, ethers.utils.parseEther("0"))).to.be.revertedWith("ZERO_AMOUNT()");
+        });
 
-      tokenIds = await vault.tokensOfOwner(admin.address);
-      expect(tokenIds.length).to.be.equal(1);
+        it("Should be reverted from not token owner",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            await expect(vault.removeLiquidity(notOperator.address, ethers.utils.parseEther("1"))).to.be.revertedWith("Not approved");
+        });
 
-      expect(await vault.totalStaked()).to.be.equal(stakedBalance.div(2));
-      expect(await vault.stakedAmounts(tokenIds[0])).to.be.equal(stakedBalance.div(2));
-    })
-    it("should burn NFTs when unstake all", async () => {
-      let tokenIds = await vault.tokensOfOwner(admin.address);
-      expect(tokenIds.length).to.be.equal(1);
+        it("Should be reverted with too much remove amount",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            await expect(vault.connect(notOperator).removeLiquidity(notOperator.address, ethers.utils.parseEther("10"))).to.be.revertedWith("Insufficient share amount");
+        });
 
-      const beforeBalance = await uToken.balanceOf(admin.address);
-      const stakedBalance = await vault.stakedAmounts(tokenIds[0]);
-      await expect(
-        vault.unstake(admin.address, stakedBalance)
-      ).to.be.emit(vault, "Unstaked").withArgs(admin.address, stakedBalance);
-      const afterBalance = await uToken.balanceOf(admin.address);
+        it("Should be able to remove liquidity with sufficient funds", async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+            await vault.addNewLiquidityPosition(owner.address, ethers.utils.parseEther("5"));
+            let tokenIds = await vault.tokensOfOwner(owner.address);
 
-      expect(afterBalance.sub(beforeBalance)).to.be.equal(stakedBalance);
+            await vault.addNewLiquidityPosition(owner.address, ethers.utils.parseEther("5"));
+            tokenIds = await vault.tokensOfOwner(owner.address);
 
-      tokenIds = await vault.tokensOfOwner(admin.address);
-      expect(tokenIds.length).to.be.equal(0);
+            const totalShareSupply = await vault.totalShareSupply();
+            const totalSupply = await vault.totalSupply();
 
-      expect(await vault.totalStaked()).to.be.equal(0);
-    })
-  })
+            let shares = await vault.getSharesOfUser(owner.address);
+            const nextTokenId = await vault.nextTokenId();
+            
+            const prevVaultBalance = await uToken.balanceOf(vault.address);
+            expect(await vault.removeLiquidity(owner.address, ethers.utils.parseEther("7"))).to
+                .emit(vault, "LiquidityRemoved")
+                .withArgs(owner.address, tokenIds, ethers.utils.parseEther("7"), ethers.utils.parseEther("7"), nextTokenId, ethers.utils.parseEther("3"));
 
-})
+            expect(await vault.totalShareSupply()).to.be.equal(totalShareSupply.sub(ethers.utils.parseEther("7")));
+            expect(await vault.totalSupply()).to.be.equal(totalSupply.sub(tokenIds.length).add(1));
+            expect((await vault.getSharesOfUser(owner.address)).shares).to.be.equal(shares.shares.sub(ethers.utils.parseEther("7")));
+            expect((await vault.getSharesOfUser(owner.address)).underlyingTokenAmount).to.be.equal(shares.underlyingTokenAmount.sub(ethers.utils.parseEther("7")));
+            expect(await uToken.balanceOf(vault.address)).to.be.equal(prevVaultBalance.sub(ethers.utils.parseEther("7")));
+            expect((await vault.tokensOfOwner(owner.address))[0]).to.be.equal(nextTokenId);
+        });
+    });
+
+    describe("Merge positions", () => {
+        it("Should be reverted from not owner, or not approved",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+
+            await expect(vault.connect(notOperator).mergePositions(owner.address, [6])).to.be.revertedWith("Non owner or approved");
+        });
+
+        it("Should be able to merge",async () => {
+            const {vaultManager, notOperator, owner, uToken, uToken_other, config} = await loadFixture(vaultFixture);
+            const vaultAddress = await vaultManager.vaults(uToken.address);
+            const vault = BinaryVault__factory.connect(vaultAddress, owner);
+
+            await vault.addNewLiquidityPosition(owner.address, ethers.utils.parseEther("3"));
+            const tokenIds = await vault.tokensOfOwner(owner.address);
+            const nextTokenId = await vault.nextTokenId();
+            const shares = (await vault.getSharesOfUser(owner.address)).shares;
+
+            expect(await vault.mergePositions(owner.address, tokenIds)).to
+                .emit(vault, "PositionMerged")
+                .withArgs(owner.address, tokenIds, nextTokenId);
+
+            expect((await vault.getSharesOfUser(owner.address)).shares).to.be.equal(shares);
+        });
+    });
+});

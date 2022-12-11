@@ -232,13 +232,13 @@ contract BinaryVault is
     */
     function mergePositions(address user, uint256[] memory tokenIds) public {
         require(user != address(0), "Invalid user");
+        require(user == msg.sender || isApprovedForAll(user, msg.sender), "Non owner or approved");
 
         uint256 shareAmounts = 0;
         for (uint256 i; i < tokenIds.length; i = i + 1) {
             uint256 tokenId = tokenIds[i];
             require(_exists(tokenId), "Non exists token");
             require(ownerOf(tokenId) == user, "Not owner");
-            require(user == msg.sender || isApprovedForAll(user, msg.sender), "Non owner or approved");
 
             shareAmounts += shareBalances[tokenId];
             _burn(tokenId);
@@ -339,6 +339,7 @@ contract BinaryVault is
         uint256 _underlyingTokenAmount = shareAmount * underlyingTokenBalance / totalShareSupply;
         underlyingToken.safeTransfer(user, _underlyingTokenAmount);
         
+        totalShareSupply -= shareAmount;
         emit LiquidityRemovedFromPosition(user, tokenId, _underlyingTokenAmount, shareAmount, newTokenId, shareBalance - shareAmount);
     }
 
@@ -362,7 +363,11 @@ contract BinaryVault is
      * @param user Address of winner
      * @param amount Amount of rewards to claim
      */
-    function claimBettingRewards(address user, uint256 amount) external onlyMarket {
+    function claimBettingRewards(address user, uint256 amount) 
+        external 
+        onlyMarket 
+        nonReentrant 
+    {
         if (amount == 0) revert ZERO_AMOUNT();
         if (user == address(0)) revert ZERO_ADDRESS();
 
@@ -386,6 +391,13 @@ contract BinaryVault is
         }
         
         underlyingTokenAmount = shares * underlyingTokenBalance / totalShareSupply; 
+    }
+
+    /**
+    * @dev Get next token id
+    */
+    function nextTokenId() public view returns(uint256) {
+        return _nextTokenId();
     }
 
     /**
