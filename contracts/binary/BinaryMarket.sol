@@ -19,6 +19,7 @@ contract BinaryMarket is
 {
     using SafeERC20 for IERC20;
 
+    // fixme do we real need all fields to be uint256?
     struct Round {
         uint256 epoch;
         uint256 startBlock;
