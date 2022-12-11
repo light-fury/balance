@@ -11,12 +11,15 @@ import "../interfaces/binary/IBinaryVault.sol";
 import "../interfaces/binary/IOracle.sol";
 import "./BinaryErrors.sol";
 
+// fixme I would personally get rid of roundid in oracle. Its redundant information. No need to have it in oracle and I would like if possible to switch oracle to chain link (to allow to write it like we can not that we will do it). That means we can use same oracle for perps. We want to configure perps from existing contracts we have. Less code we need to test and maintain.
+// fixme decide if use error constants or error string, not both. Better to use "ERROR_LIKE_THIS" then "like this"
 contract BinaryMarket is
     Pausable,
     IBinaryMarket
 {
     using SafeERC20 for IERC20;
 
+    // fixme do we real need all fields to be uint256?
     struct Round {
         uint256 epoch;
         uint256 startBlock;
@@ -65,6 +68,7 @@ contract BinaryMarket is
     uint256 public minBetAmount;
     uint256 public oracleLatestRoundId;
 
+    // fixme why admin is not from ownable, why operator is not from accesscontrol?
     address public adminAddress;
     address public operatorAddress;
 
@@ -123,6 +127,7 @@ contract BinaryMarket is
     );
 
 
+    // fixme move it to other fields. Above events
     /// @dev timeframe id => genesis locked?
     mapping(uint8 => bool) public genesisLockOnces;
 
@@ -168,12 +173,16 @@ contract BinaryMarket is
 
         for (uint256 i = 0; i < timeframes_.length; i = i + 1) {
             timeframes.push(timeframes_[i]);
+            // fixme no need to initialize false. It's by default . You are spending gas here
             genesisLockOnces[timeframes_[i].id] = false;
         }
 
         underlyingToken = vault.underlyingToken();
+        // fixme false is default
         genesisStartOnce = false;
     }
+
+    // fixme do we need to change vault and oracle at runtime? Wouldn't be better to deploy new market? I mean we should minimize way how contract owner can rug users. Maybe allow to change only oracle?
 
     /**
      * @notice Set oracle of underlying token of this market
@@ -294,6 +303,8 @@ contract BinaryMarket is
         genesisLockOnces[timeframeId] = true;
     }
 
+
+    // fixme what if I have 2m and 3m timeframes? I would like to not depend on having 1m tf.
     /**
      * @dev Start the next round n, lock price for round n-1, end round n-2
      */
@@ -576,6 +587,8 @@ contract BinaryMarket is
         view
         returns (bool)
     {
+        // fixme I cannot bet if it's locked
+        // fixme here I want a safeguard that I cannot bet on such round which should have close price at time which already gone on block.timestamp 
         return
             rounds[timeframeId][epoch].startBlock != 0 &&
             rounds[timeframeId][epoch].lockBlock != 0 &&
@@ -591,6 +604,7 @@ contract BinaryMarket is
         uint256 epoch,
         address user
     ) public view returns (bool) {
+        // fixme now imagine that people will refund their lost bets. We need to do some interval between close timestamp and us writing close price. Let's say you can refund if we don't write price within 30minutes after close timestamp.
         BetInfo memory betInfo = ledger[timeframeId][epoch][user];
         Round memory round = rounds[timeframeId][epoch];
         return
@@ -639,6 +653,8 @@ contract BinaryMarket is
         return lockable && closable && (prevRound.totalAmount > 0 || round.totalAmount > 0);
     }
 
+
+    // fixme why this not returning array of uint8?
     /**
         @dev check if bet is active
      */

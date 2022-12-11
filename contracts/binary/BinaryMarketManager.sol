@@ -10,6 +10,7 @@ import "../interfaces/binary/IBinaryMarket.sol";
 import "../interfaces/binary/IBinaryMarketManager.sol";
 import "./BinaryMarket.sol";
 
+// fixme why market doesn't have its contract address? We want to be able to deliver changes and have same manager. Otherwise it's not needed to have a manager at all
 contract BinaryMarketManager is 
     Ownable, 
     IBinaryMarketManager 
