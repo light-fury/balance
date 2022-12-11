@@ -11,4 +11,8 @@ contract MockERC20 is ERC20("Mock", "Mock") {
     constructor() {
         _mint(msg.sender, 1e50);
     }
+
+    function mint(uint amount) external {
+        _mint(msg.sender, amount);
+    }
 }

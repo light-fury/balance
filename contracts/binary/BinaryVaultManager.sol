@@ -60,20 +60,4 @@ contract BinaryVaultManager is Ownable, IBinaryVaultManager {
         vaults[uToken] = IBinaryVault(vault);
         underlyingTokens.push(uToken);
     }
-
-    function stake(address uToken, uint256 amount) external override {
-        IBinaryVault vault = vaults[uToken];
-        require(address(vault) != address(0), "invalid uToken");
-        require(amount > 0, "zero amount");
-
-        vault.stake(msg.sender, amount);
-    }
-
-    function unstake(address uToken, uint256 amount) external override {
-        IBinaryVault vault = vaults[uToken];
-        require(address(vault) != address(0), "invalid uToken");
-        require(amount > 0, "zero amount");
-
-        vault.unstake(msg.sender, amount);
-    }
 }

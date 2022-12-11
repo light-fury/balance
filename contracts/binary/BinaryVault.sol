@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
 import "../interfaces/binary/IBinaryVault.sol";
@@ -18,9 +19,11 @@ import "./BinaryErrors.sol";
 contract BinaryVault is
     ERC721AQueryable,
     Pausable,
-    IBinaryVault
+    IBinaryVault,
+    ReentrancyGuard
 {
     using SafeERC20 for IERC20;
+    uint256 public constant MINIMUM_LIQUIDITY = 10**3;
 
     IBinaryConfig public config;
 
@@ -30,13 +33,24 @@ contract BinaryVault is
     /// @dev Whitelisted markets, only whitelisted markets can take money out from the vault.
     mapping(address => bool) public whitelistedMarkets;
 
-    /// token Id => amount, represents user share on the vault
-    mapping(uint256 => uint256) public stakedAmounts;
+    /// @dev share balances (token id => share balance)
+    mapping(uint256 => uint256) public shareBalances;
+    
+    uint256 public totalShareSupply;
 
-    uint256 public totalStaked;
     uint256 public feeAccrued;
     
     address public adminAddress;
+
+    event AdminChanged(address indexed admin);
+    event ConfigChanged(address indexed config);
+    event WhitelistMarketChanged(address indexed market, bool enabled);
+    event NewLiquidityAdded(address indexed user, uint256 tokenId, uint256 amount, uint256 shareAmount);
+    event LiquidityAdded(address indexed user, uint256 oldTokenId, uint256 newTokenId, uint256 amount, uint256 newShareAmount);
+    event PositionMerged(address indexed user, uint256[] tokenIds, uint256 newTokenId);
+    event LiquidityRemoved(address indexed user, uint256[] tokenids, uint256 newTokenId, uint256 amount, uint256 shareAmount, uint256 newShares);
+    event LiquidityRemovedFromPosition(address indexed user, uint256 tokenId, uint256 amount, uint256 shares, uint256 newTokenId, uint256 newShare);
+
     modifier onlyMarket() {
         if (!whitelistedMarkets[msg.sender]) revert NOT_FROM_MARKET(msg.sender);
         _;
@@ -88,6 +102,8 @@ contract BinaryVault is
     {
         if (market == address(0)) revert ZERO_ADDRESS();
         whitelistedMarkets[market] = whitelist;
+
+        emit WhitelistMarketChanged(market, whitelist);
     }
 
     /**
@@ -128,75 +144,202 @@ contract BinaryVault is
     }
 
     /**
-     * @notice Stake underlying tokens to the vault
-     * @param user Staker's address
-     * @param amount Amount of underlying tokens to stake
-     */
-    function stake(address user, uint256 amount)
+    * @dev Add New liquidity
+    * @param user Receipt for share
+    * @param amount Underlying token amount
+    */
+    function addNewLiquidityPosition(address user, uint256 amount)
         external
         override
         whenNotPaused
+        nonReentrant
     {
         if (user == address(0)) revert ZERO_ADDRESS();
         if (amount == 0) revert ZERO_AMOUNT();
+        // Mint new one
+        uint256 tokenId = _nextTokenId();
+        _mint(user, 1);
 
+        uint256 underlyingTokenBalance = underlyingToken.balanceOf(address(this));
         // Transfer underlying token from user to the vault
         underlyingToken.safeTransferFrom(user, address(this), amount);
 
-        // Burn prev token share
-        uint256[] memory tokenIds = tokensOfOwner(user);
-        uint256 stakedAmount;
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            stakedAmount += stakedAmounts[tokenIds[i]];
-            delete stakedAmounts[tokenIds[i]];
-            _burn(tokenIds[i], false);
+        uint256 newShares = 0;
+        if (totalShareSupply > 0) {
+            newShares = (amount * totalShareSupply) / underlyingTokenBalance;
+        } else {
+            newShares = amount;
+            require(newShares > MINIMUM_LIQUIDITY, "Insufficient amount");
         }
-        // Mint new one
-        uint256 tokenId = _nextTokenId();
-        stakedAmounts[tokenId] = stakedAmount + amount;
-        _mint(user, 1);
 
-        totalStaked += amount;
+        shareBalances[tokenId] = newShares;
+        
+        totalShareSupply += newShares;
 
-        emit Staked(user, tokenId, amount);
+        emit NewLiquidityAdded(user, tokenId, amount, newShares);
     }
 
     /**
-     * @notice Unstake underlying tokens from the vault
-     * @param user Staker's address
-     * @param amount Amount of underlying tokens to unstake
-     */
-    function unstake(address user, uint256 amount)
+    * @dev Add liquidity. Burn existing token, mint new one.
+    * @param user Receipt for share
+    * @param amount Underlying token amount
+    * @param tokenId nft id to be added liquidity. This should be existing id.
+    */
+    function addLiquidityPosition(address user, uint256 amount, uint256 tokenId)
         external
         override
         whenNotPaused
+        nonReentrant
     {
-        if (amount == 0) revert ZERO_AMOUNT();
         if (user == address(0)) revert ZERO_ADDRESS();
+        if (amount == 0) revert ZERO_AMOUNT();
+        require(_exists(tokenId), "Non exists token");
+        require(ownerOf(tokenId) == user, "Not owner");
+        require(user == msg.sender || isApprovedForAll(user, msg.sender), "Not approved or owner");
 
-        // collect previous deposits and burn
+        uint256 underlyingTokenBalance = underlyingToken.balanceOf(address(this));
+        // Transfer underlying token from user to the vault
+        underlyingToken.safeTransferFrom(user, address(this), amount);
+
+        uint256 newShares = 0;
+        if (totalShareSupply > 0) {
+            newShares = (amount * totalShareSupply) / underlyingTokenBalance;
+        } else {
+            newShares = amount;
+            require(newShares > MINIMUM_LIQUIDITY, "Insufficient amount");
+        }
+
+        uint256 currentShare = shareBalances[tokenId];
+        // Burn existing one
+        _burn(tokenId);
+        delete shareBalances[tokenId];
+        // Mint new one
+        uint256 newTokenId = _nextTokenId();
+        _mint(user, 1);
+
+        shareBalances[newTokenId] = currentShare + newShares;
+        
+        totalShareSupply += newShares;
+
+        // TODO Update event
+        emit LiquidityAdded(user, tokenId, newTokenId, amount, newShares);
+    }
+
+    /**
+    * @dev Merge tokens into one, Burn existing ones and mint new one
+    * @param user receipent
+    * @param tokenIds Token ids which will be merged
+    */
+    function mergePositions(address user, uint256[] memory tokenIds) public {
+        require(user != address(0), "Invalid user");
+
+        uint256 shareAmounts = 0;
+        for (uint256 i; i < tokenIds.length; i = i + 1) {
+            uint256 tokenId = tokenIds[i];
+            require(_exists(tokenId), "Non exists token");
+            require(ownerOf(tokenId) == user, "Not owner");
+            require(user == msg.sender || isApprovedForAll(user, msg.sender), "Non owner or approved");
+
+            shareAmounts += shareBalances[tokenId];
+            _burn(tokenId);
+            delete shareBalances[tokenId];
+        }
+
+        uint256 _newTokenId = _nextTokenId();
+        _mint(user, 1);
+        shareBalances[_newTokenId] = shareAmounts;
+
+        emit PositionMerged(user, tokenIds, _newTokenId);
+    }
+
+    /**
+    * @dev Merge all owned nfts into new one
+    */
+    function mergeAllPositions(address user) external {
         uint256[] memory tokenIds = tokensOfOwner(user);
-        if (tokenIds.length == 0) revert NO_DEPOSIT(user);
+        mergePositions(user, tokenIds);
+    }
 
-        uint256 stakedAmount;
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            stakedAmount += stakedAmounts[tokenIds[i]];
-            delete stakedAmounts[tokenIds[i]];
-            _burn(tokenIds[i], true);
+    /**
+    *@dev Remove share, and merge to one
+    *@param user receipent
+    *@param shareAmount Share amount
+    */
+    function removeLiquidity(address user, uint256 shareAmount)
+        external
+        override
+        whenNotPaused
+        nonReentrant
+    {
+        if (shareAmount == 0) revert ZERO_AMOUNT();
+        require(msg.sender == user || isApprovedForAll(user, msg.sender), "Not approved");
+
+        uint256[] memory tokenIds = tokensOfOwner(user);
+
+        uint256 shareAmounts = 0;
+        for (uint256 i; i < tokenIds.length; i = i + 1) {
+            uint256 tokenId = tokenIds[i];
+            shareAmounts += shareBalances[tokenId];
+            _burn(tokenId);
+            delete shareBalances[tokenId];
         }
-        if (amount > stakedAmount) revert EXCEED_BALANCE(user, amount);
 
-        // mint new one when some dust left
-        if (amount < stakedAmount) {
-            uint256 tokenId = _nextTokenId();
-            stakedAmounts[tokenId] = stakedAmount - amount;
+        require(shareAmount <= shareAmounts, "Insufficient share amount");
+
+        uint256 underlyingTokenBalance = underlyingToken.balanceOf(address(this));
+
+        uint256 _newTokenId;
+        if (shareAmounts > shareAmount) {
+            // Mint dust nft
+            _newTokenId = _nextTokenId();
             _mint(user, 1);
+            shareBalances[_newTokenId] = shareAmounts - shareAmount;
         }
 
-        totalStaked -= amount;
-        underlyingToken.safeTransfer(user, amount);
+        // Transfer underlying token
+        uint256 _underlyingTokenAmount = shareAmount * underlyingTokenBalance / totalShareSupply;
+        underlyingToken.safeTransfer(user, _underlyingTokenAmount);
 
-        emit Unstaked(user, amount);
+        totalShareSupply -= shareAmount;
+
+        emit LiquidityRemoved(user, tokenIds, _underlyingTokenAmount, shareAmount, _newTokenId, shareAmounts - shareAmount);
+    }
+
+    /**
+    * @dev Remove liquidity from position
+    * @param user Receipent
+    * @param tokenId position that where remove liquidity from
+    * @param shareAmount amount of share
+    */
+    function removeLiquidityPosition(address user, uint256 tokenId, uint256 shareAmount)
+        external 
+        override
+        whenNotPaused
+        nonReentrant
+    {
+        if (shareAmount == 0) revert ZERO_AMOUNT();
+        require(_exists(tokenId), "Invalid token id");
+        require(ownerOf(tokenId) == user, "Not owner");
+        require(msg.sender == user || isApprovedForAll(user, msg.sender), "Not approved");
+        uint256 shareBalance = shareBalances[tokenId];
+        require(shareBalance >= shareAmount, "Insufficient shares");
+        _burn(tokenId);
+        delete shareBalances[tokenId];
+
+        uint256 newTokenId;
+        if (shareAmount < shareBalance) {
+            // Mint new one for dust
+            newTokenId = _nextTokenId();
+            _mint(user, 1);
+            shareBalances[newTokenId] = shareBalance - shareAmount;
+        }
+
+        uint256 underlyingTokenBalance = underlyingToken.balanceOf(address(this));
+        // Transfer underlying token
+        uint256 _underlyingTokenAmount = shareAmount * underlyingTokenBalance / totalShareSupply;
+        underlyingToken.safeTransfer(user, _underlyingTokenAmount);
+        
+        emit LiquidityRemovedFromPosition(user, tokenId, _underlyingTokenAmount, shareAmount, newTokenId, shareBalance - shareAmount);
     }
 
     /**
@@ -228,11 +371,41 @@ contract BinaryVault is
     }
 
     /**
+    * @dev Get shares of user.
+    */
+    function getSharesOfUser(address user) 
+        public 
+        view 
+        returns(uint256 shares, uint256 underlyingTokenAmount)
+    {
+        uint256 underlyingTokenBalance = underlyingToken.balanceOf(address(this));
+
+        uint256[] memory tokenIds = tokensOfOwner(user);
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            shares += shareBalances[tokenIds[i]];
+        }
+        
+        underlyingTokenAmount = shares * underlyingTokenBalance / totalShareSupply; 
+    }
+
+    /**
     * @notice Change admin
     */
 
     function setAdmin(address _newAdmin) external onlyAdmin {
         require(_newAdmin != address(0), "Invalid address");
         adminAddress = _newAdmin;
+
+        emit AdminChanged(_newAdmin);
+    }
+
+    /**
+    * @dev set config
+    */
+    function setConfig(IBinaryConfig _config) external onlyAdmin {
+        require(address(_config) != address(0), "Invalid address");
+        config = _config;
+
+        emit ConfigChanged(address(_config));
     }
 }

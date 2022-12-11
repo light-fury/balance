@@ -20,6 +20,11 @@ contract Oracle is AccessControl, IOracle {
     /// @dev Prices by roundId
     mapping(uint256 => Round) public rounds;
 
+    /// @dev round id array
+    mapping(uint256 => uint256) public allRoundIds;
+
+    uint256 public roundLength = 0;
+
     /// @dev Round ID of last round, Round ID is zero-based
     Round public latestRoundData;
 
@@ -105,6 +110,8 @@ contract Oracle is AccessControl, IOracle {
 
         latestRoundData = newRound;
 
+        allRoundIds[roundLength] = roundId;
+        roundLength = roundLength + 1;
         emit WrotePrice(msg.sender, roundId, timestamp, price);
     }
 

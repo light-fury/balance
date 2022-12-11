@@ -10,8 +10,4 @@ interface IBinaryVaultManager {
         address underlyingToken_,
         address config_
     ) external;
-
-    function stake(address uToken, uint256 amount) external;
-
-    function unstake(address uToken, uint256 amount) external;
 }
