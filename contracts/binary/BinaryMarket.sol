@@ -68,6 +68,7 @@ contract BinaryMarket is
     uint256 public minBetAmount;
     uint256 public oracleLatestRoundId;
 
+    // fixme why admin is not from ownable, why operator is not from accesscontrol?
     address public adminAddress;
     address public operatorAddress;
 
