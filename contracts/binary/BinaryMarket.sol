@@ -604,6 +604,7 @@ contract BinaryMarket is
         uint256 epoch,
         address user
     ) public view returns (bool) {
+        // fixme now imagine that people will refund their lost bets. We need to do some interval between close timestamp and us writing close price. Let's say you can refund if we don't write price within 30minutes after close timestamp.
         BetInfo memory betInfo = ledger[timeframeId][epoch][user];
         Round memory round = rounds[timeframeId][epoch];
         return
