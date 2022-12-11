@@ -652,6 +652,8 @@ contract BinaryMarket is
         return lockable && closable && (prevRound.totalAmount > 0 || round.totalAmount > 0);
     }
 
+
+    // fixme why this not returning array of uint8?
     /**
         @dev check if bet is active
      */
