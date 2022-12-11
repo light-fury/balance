@@ -587,6 +587,7 @@ contract BinaryMarket is
         view
         returns (bool)
     {
+        // fixme here I want a safeguard that I cannot bet on such round which should have close price at time which already gone on block.timestamp 
         return
             rounds[timeframeId][epoch].startBlock != 0 &&
             rounds[timeframeId][epoch].lockBlock != 0 &&
