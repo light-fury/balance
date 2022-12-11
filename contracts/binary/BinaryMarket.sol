@@ -124,6 +124,7 @@ contract BinaryMarket is
     );
 
 
+    // fixme move it to other fields. Above events
     /// @dev timeframe id => genesis locked?
     mapping(uint8 => bool) public genesisLockOnces;
 
@@ -169,6 +170,7 @@ contract BinaryMarket is
 
         for (uint256 i = 0; i < timeframes_.length; i = i + 1) {
             timeframes.push(timeframes_[i]);
+            // fixme no need to initialize false. It's by default . You are spending gas here
             genesisLockOnces[timeframes_[i].id] = false;
         }
 
