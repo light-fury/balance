@@ -176,6 +176,8 @@ contract BinaryMarket is
         genesisStartOnce = false;
     }
 
+    // fixme do we need to change vault and oracle at runtime? Wouldn't be better to deploy new market? I mean we should minimize way how contract owner can rug users. Maybe allow to change only oracle?
+
     /**
      * @notice Set oracle of underlying token of this market
      * @dev Only owner can set the oracle
