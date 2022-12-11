@@ -11,6 +11,7 @@ import "../interfaces/binary/IBinaryVault.sol";
 import "../interfaces/binary/IOracle.sol";
 import "./BinaryErrors.sol";
 
+// fixme I would personally get rid of roundid in oracle. Its redundant information. No need to have it in oracle and I would like if possible to switch oracle to chain link (to allow to write it like we can not that we will do it). That means we can use same oracle for perps. We want to configure perps from existing contracts we have. Less code we need to test and maintain.
 // fixme decide if use error constants or error string, not both. Better to use "ERROR_LIKE_THIS" then "like this"
 contract BinaryMarket is
     Pausable,
