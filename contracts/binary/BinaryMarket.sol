@@ -303,6 +303,8 @@ contract BinaryMarket is
         genesisLockOnces[timeframeId] = true;
     }
 
+
+    // fixme what if I have 2m and 3m timeframes? I would like to not depend on having 1m tf.
     /**
      * @dev Start the next round n, lock price for round n-1, end round n-2
      */
