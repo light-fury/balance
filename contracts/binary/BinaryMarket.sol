@@ -11,6 +11,7 @@ import "../interfaces/binary/IBinaryVault.sol";
 import "../interfaces/binary/IOracle.sol";
 import "./BinaryErrors.sol";
 
+// fixme decide if use error constants or error string, not both. Better to use "ERROR_LIKE_THIS" then "like this"
 contract BinaryMarket is
     Pausable,
     IBinaryMarket
