@@ -14,6 +14,7 @@ contract Oracle is AccessControl, IOracle {
         uint256 price;
         address writer;
     }
+    // fixme can we get rid of roundid on oracle? Why do I care about roundid here, how to find which next roundid should I use
 
     bytes32 public constant WRITER_ROLE = keccak256("BALANCE_ORACLE_WRITER");
 
@@ -75,6 +76,7 @@ contract Oracle is AccessControl, IOracle {
     function setWriter(address writer, bool enable) external onlyAdmin {
         require(writer != address(0), "Invalid address");
         if (enable) {
+            // fixme can you require that it's disabled if you are doing enable 
             grantRole(WRITER_ROLE, writer);
         } else {
             revokeRole(WRITER_ROLE, writer);
