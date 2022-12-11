@@ -12,6 +12,7 @@ interface IBinaryMarket {
         uint8 id;
         uint256 interval;
         uint256 intervalBlocks;
+        uint256 bufferBlocks;
     }
 
     function openPosition(

@@ -17,6 +17,7 @@ contract BinaryMarketManager is
 {
     struct MarketData {
         address market;
+        string pairName;
         bool enable;
     }
 
@@ -28,6 +29,7 @@ contract BinaryMarketManager is
         address oracle, 
         address vault, 
         string name,
+        string indexed pairName,
         address admin,
         address operator,
         uint minBetAmount
@@ -39,6 +41,7 @@ contract BinaryMarketManager is
         IOracle oracle_,
         IBinaryVault vault_,
         string memory marketName_,
+        string memory pairName_,
         IBinaryMarket.TimeFrame[] memory timeframes_,
         address adminAddress_,
         address operatorAddress_,
@@ -58,6 +61,7 @@ contract BinaryMarketManager is
         allMarkets.push(
             MarketData(
                 address(newMarket),
+                pairName_,
                 true
             )
         );
@@ -68,9 +72,21 @@ contract BinaryMarketManager is
             address(oracle_),
             address(vault_),
             marketName_,
+            pairName_,
             adminAddress_,
             operatorAddress_,
             minBetAmount_
         );
+    }
+
+    /// @dev Retrieve market by market pair name
+    function getMarketByPairName(string memory pairName) external view returns(address) {
+        for (uint256 i = 0; i < allMarkets.length; i = i + 1) {
+            MarketData memory d = allMarkets[i];
+            if (keccak256(abi.encodePacked(d.pairName)) == keccak256(abi.encodePacked(pairName))) {
+                return d.market;
+            }
+        }
+        return address(0);
     }
 }

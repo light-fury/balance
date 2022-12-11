@@ -20,6 +20,7 @@ contract BinaryMarket is
     using SafeERC20 for IERC20;
 
     // fixme do we real need all fields to be uint256?
+    // legendary, TBH, not sure.. but I think most of them should be.
     struct Round {
         uint256 epoch;
         uint256 startBlock;
@@ -69,10 +70,16 @@ contract BinaryMarket is
     uint256 public oracleLatestRoundId;
 
     // fixme why admin is not from ownable, why operator is not from accesscontrol?
+    // legendary - We aimed to create all markets from market mananger. 
+    // In this case owner will be market manager, so we cannot control market directly. 
+    // I don't think we need to do all admin operations through market manager. What do you think?
     address public adminAddress;
     address public operatorAddress;
 
+    /// @dev default false
     bool public genesisStartOnce;
+    /// @dev timeframe id => genesis locked? default false
+    mapping(uint8 => bool) public genesisLockOnces;
 
     event PositionOpened(
         string indexed marketName,
@@ -109,10 +116,6 @@ contract BinaryMarket is
         address indexed oldOracle,
         address indexed newOracle
     );
-    event VaultChanged(
-        address indexed oldVault,
-        address indexed newVault
-    );
     event MarketNameChanged(
         string oldName,
         string newName
@@ -125,12 +128,6 @@ contract BinaryMarket is
         address indexed oldOperator,
         address indexed newOperator
     );
-
-
-    // fixme move it to other fields. Above events
-    /// @dev timeframe id => genesis locked?
-    mapping(uint8 => bool) public genesisLockOnces;
-
 
     modifier onlyAdmin() {
         require(msg.sender == adminAddress, "admin: wut?");
@@ -173,16 +170,10 @@ contract BinaryMarket is
 
         for (uint256 i = 0; i < timeframes_.length; i = i + 1) {
             timeframes.push(timeframes_[i]);
-            // fixme no need to initialize false. It's by default . You are spending gas here
-            genesisLockOnces[timeframes_[i].id] = false;
         }
 
         underlyingToken = vault.underlyingToken();
-        // fixme false is default
-        genesisStartOnce = false;
     }
-
-    // fixme do we need to change vault and oracle at runtime? Wouldn't be better to deploy new market? I mean we should minimize way how contract owner can rug users. Maybe allow to change only oracle?
 
     /**
      * @notice Set oracle of underlying token of this market
@@ -193,17 +184,6 @@ contract BinaryMarket is
         if (address(oracle_) == address(0)) revert ZERO_ADDRESS();
         emit OracleChanged(address(oracle), address(oracle_));
         oracle = oracle_;
-    }
-
-    /**
-     * @notice Set vault of underlying token of this market
-     * @dev Only owner can set the vault
-     * @param vault_ New vault address to set
-     */
-    function setVault(IBinaryVault vault_) external onlyAdmin {
-        if (address(vault_) == address(0)) revert ZERO_ADDRESS();
-        emit VaultChanged(address(vault), address(vault_));
-        vault = vault_;
     }
 
     /**
@@ -305,6 +285,7 @@ contract BinaryMarket is
 
 
     // fixme what if I have 2m and 3m timeframes? I would like to not depend on having 1m tf.
+    // legendary - Our bet round doesn't depend on timeframe specifician, I think we can use any timeframe 2m or 3m. Just need to determine how to call this function from backend.
     /**
      * @dev Start the next round n, lock price for round n-1, end round n-2
      */
@@ -589,6 +570,8 @@ contract BinaryMarket is
     {
         // fixme I cannot bet if it's locked
         // fixme here I want a safeguard that I cannot bet on such round which should have close price at time which already gone on block.timestamp 
+        // legendary - lockblock !=0 means this round should already be started. (Not live yet, just ready to accept bets), and lockPrice == 0 means this block should not be locked yet (still acceptable bet)
+        // So once round starts, it can accept bets till it will be locked. (till executeRound called from backend)
         return
             rounds[timeframeId][epoch].startBlock != 0 &&
             rounds[timeframeId][epoch].lockBlock != 0 &&
@@ -605,11 +588,12 @@ contract BinaryMarket is
         address user
     ) public view returns (bool) {
         // fixme now imagine that people will refund their lost bets. We need to do some interval between close timestamp and us writing close price. Let's say you can refund if we don't write price within 30minutes after close timestamp.
+        // legendary - Yes, I agree. We can set buffer block for each timeframe.
         BetInfo memory betInfo = ledger[timeframeId][epoch][user];
         Round memory round = rounds[timeframeId][epoch];
         return
             !round.oracleCalled &&
-            block.number > round.closeBlock &&
+            block.number > round.closeBlock + timeframes[timeframeId].bufferBlocks &&
             betInfo.amount != 0;
     }
 
@@ -655,6 +639,7 @@ contract BinaryMarket is
 
 
     // fixme why this not returning array of uint8?
+    // legendary - In that case, we might be confuse because solidity default value of uint8 is 0.
     /**
         @dev check if bet is active
      */
