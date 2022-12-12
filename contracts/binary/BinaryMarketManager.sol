@@ -29,7 +29,7 @@ contract BinaryMarketManager is
         address oracle, 
         address vault, 
         string name,
-        string indexed pairName,
+        string pairName,
         address admin,
         address operator,
         uint minBetAmount

@@ -3,7 +3,7 @@ import { loadFixture } from "ethereum-waffle"
 import { ethers, network } from "hardhat"
 import { marketFixture } from "./fixture"
 
-describe("Binary Option Trading - Market & Market manager", () => {
+describe.only("Binary Option Trading - Market & Market manager", () => {
     describe("Execute Round", async () => {
         it("Should reverted when not operator: ", async () => {
             const {market, operator, notOperator} = await loadFixture(marketFixture);
@@ -35,21 +35,37 @@ describe("Binary Option Trading - Market & Market manager", () => {
         });
 
         it("Should be able to execute Round with operator wallet after genesis start and lock: ", async () => {
-            const {market, operator} = await loadFixture(marketFixture);
+            const {market, operator, owner} = await loadFixture(marketFixture);
+            await market.connect(owner).setTimeframes( [{
+                id: 0,
+                interval: 60,
+                intervalBlocks: 4,
+                bufferBlocks: 3,
+            }, {
+                id: 1,
+                interval: 300,
+                intervalBlocks: 20,
+                bufferBlocks: 5,
+            }, {
+                id: 2,
+                interval: 900,
+                intervalBlocks: 60,
+                bufferBlocks: 8,
+            }])
             // mine one block
-            await network.provider.send("hardhat_mine", ["0x1"]); // min 1 blocks
+            // await network.provider.send("hardhat_mine", ["0x1"]); // min 1 blocks
             
             await market.connect(operator).genesisStartRound();
             expect((await market.rounds(0, 1)).epoch).to.be.equal(1);
             expect(await market.oracleLatestRoundId()).to.be.equal(0);
             expect(await market.currentEpochs(0)).to.be.equal(1);
 
-            await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
+            await network.provider.send("hardhat_mine", ["0x400"]); // min 10 blocks
             await market.connect(operator).genesisLockRound(0);
             expect(await market.oracleLatestRoundId()).to.be.equal(1);
             expect(await market.currentEpochs(0)).to.be.equal(2);
 
-            await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
+            await network.provider.send("hardhat_mine", ["0x4"]); // min 10 blocks
             const latestBlock = await ethers.provider.getBlock("latest");
 
             await market.connect(operator).executeRound([0], 1000);
@@ -96,10 +112,9 @@ describe("Binary Option Trading - Market & Market manager", () => {
         it("Should be able to lock current round", async () => {
             const {market, owner, uToken, operator} = await loadFixture(marketFixture);
             const latestBlock = await ethers.provider.getBlock("latest");
-            await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
+            await network.provider.send("hardhat_mine", ["0x4"]); // min 10 blocks
             
             const executableTimeframes = await market.getExecutableTimeframes();
-            console.log("executableTimeframes: ", executableTimeframes);
             expect(executableTimeframes.split(",")[0]).to.be.equal('0');
 
             await market.connect(operator).executeRound([0], 1005);
@@ -113,7 +128,7 @@ describe("Binary Option Trading - Market & Market manager", () => {
             const latestBlock = await ethers.provider.getBlock("latest");
 
             // move block
-            await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
+            await network.provider.send("hardhat_mine", ["0x4"]); // min 10 blocks
 
             await market.connect(operator).executeRound([0], 1008);
             const currentEpoch = await market.currentEpochs(0);
@@ -175,7 +190,7 @@ describe("Binary Option Trading - Market & Market manager", () => {
     describe("Execute Round - (2)", () => {
         it("Should be able to execute after long time", async () => {
             const {market, notOperator, uToken, operator} = await loadFixture(marketFixture);
-            await network.provider.send("hardhat_mine", ["0xa"]); // min 10 blocks
+            await network.provider.send("hardhat_mine", ["0x4"]); // min 10 blocks
             const currentEpoch = await market.currentEpochs(0);
             await market.connect(operator).executeRound([0], 1010);
             expect(await market.currentEpochs(0)).to.be.equal(currentEpoch.add(1));

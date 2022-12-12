@@ -226,12 +226,11 @@ contract BinaryMarket is
     function setTimeframes(TimeFrame[] memory timeframes_) external onlyAdmin {
         require(timeframes_.length > 0, "Invalid length");
         genesisStartOnce = false;
-        
+        delete timeframes;
         for (uint256 i = 0; i < timeframes_.length; i = i + 1) {
             timeframes.push(timeframes_[i]);
             genesisLockOnces[timeframes_[i].id] = false;
         }
-        _unpause();
     }
 
     /**
@@ -273,8 +272,7 @@ contract BinaryMarket is
         require(genesisStartOnce, "Can only run after genesisStartRound is triggered");
         require(!genesisLockOnces[timeframeId], "Can only run genesisLockRound once");
         
-        oracle.writePrice(oracleLatestRoundId + 1, block.timestamp, 1 wei);
-
+        _writeOraclePrice(block.timestamp, 1 wei);
         (uint256 currentRoundId, uint256 currentPrice, ) = _getPriceFromOracle();
 
         _safeLockRound(timeframeId, currentEpochs[timeframeId], currentRoundId, currentPrice);
@@ -552,6 +550,7 @@ contract BinaryMarket is
         }
         return
             round.oracleCalled &&
+            betInfo.amount > 0 &&
             ((round.closePrice > round.lockPrice &&
                 betInfo.position == Position.Bull) ||
                 (round.closePrice < round.lockPrice &&
