@@ -3,7 +3,7 @@ import { loadFixture } from "ethereum-waffle"
 import { ethers, network } from "hardhat"
 import { marketFixture } from "./fixture"
 
-describe.only("Binary Option Trading - Market & Market manager", () => {
+describe("Binary Option Trading - Market & Market manager", () => {
     describe("Execute Round", async () => {
         it("Should reverted when not operator: ", async () => {
             const {market, operator, notOperator} = await loadFixture(marketFixture);
@@ -114,8 +114,9 @@ describe.only("Binary Option Trading - Market & Market manager", () => {
             const latestBlock = await ethers.provider.getBlock("latest");
             await network.provider.send("hardhat_mine", ["0x4"]); // min 10 blocks
             
-            const executableTimeframes = await market.getExecutableTimeframes();
-            expect(executableTimeframes.split(",")[0]).to.be.equal('0');
+            const {result, count} = await market.getExecutableTimeframes();
+            expect(result[0]).to.be.equal(0);
+            expect(count).to.be.equal(1);
 
             await market.connect(operator).executeRound([0], 1005);
             const currentEpoch = await market.currentEpochs(0);

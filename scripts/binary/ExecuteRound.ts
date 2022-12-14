@@ -11,14 +11,10 @@ async function executeRound() {
       "0x28ffc335a6e7a02eafe63d8052ac8c695ea4b987",
       deployer
     );
-    const executableTimeframes = await market.getExecutableTimeframes();
-    const timeframes = executableTimeframes.replace(",", "").split("");
-    console.log("timeframes: ", timeframes, executableTimeframes);
-    if (timeframes.filter(item => ((item !== '') && (item !== ","))).length > 0) {
-      const ids = timeframes.map(item => Number(item));
-      console.log("ids: ", ids);
-        await market.executeRound(ids, Math.round(price));
-        console.log("Executed: ", ids, price);
+    const {result, count} = await market.getExecutableTimeframes();
+    if (count.toNumber() > 0) {
+      await market.executeRound(result.slice(0, count.toNumber()), Math.round(price));
+      console.log("Executed: ", result.slice(0, count.toNumber()), price);
     } else {
         console.log("Not executable");
     }
