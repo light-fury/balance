@@ -14,6 +14,7 @@ import {
   daoPrivateKey,
   etherscanApiKey,
   alchemyApiKeyProd,
+  other_privateKey
 } from "./secrets.json";
 // require('@symblox/hardhat-abi-gen');
 
@@ -45,7 +46,7 @@ const config: HardhatUserConfig = {
     }, */
     goerli: {
       url: `https://goerli.infura.io/v3/9156cc61e0b54f2e8063f8fd96da5d76`,
-      accounts: [`${privateKey}`],
+      accounts: [`${privateKey}`, `${other_privateKey}`],
     },
     mainnet: {
       // url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKeyProd}`,

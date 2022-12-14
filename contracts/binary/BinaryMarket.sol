@@ -68,6 +68,8 @@ contract BinaryMarket is
     /// @dev This should be modified
     uint256 public minBetAmount;
     uint256 public oracleLatestRoundId;
+    uint256 public genesisStartBlockTimestamp;
+    uint256 public genesisStartBlockNumber;
 
     // fixme why admin is not from ownable, why operator is not from accesscontrol?
     // legendary - We aimed to create all markets from market mananger. 
@@ -256,7 +258,8 @@ contract BinaryMarket is
      */
     function genesisStartRound() external onlyOperator whenNotPaused {
         require(!genesisStartOnce, "Can only run genesisStartRound once");
-
+        genesisStartBlockTimestamp = block.timestamp;
+        genesisStartBlockNumber = block.number;
         for (uint256 i = 0; i < timeframes.length; i = i + 1) {
             currentEpochs[timeframes[i].id] = currentEpochs[timeframes[i].id] + 1;
             _startRound(timeframes[i].id, currentEpochs[timeframes[i].id]);
@@ -551,6 +554,7 @@ contract BinaryMarket is
         return
             round.oracleCalled &&
             betInfo.amount > 0 &&
+            !betInfo.claimed && 
             ((round.closePrice > round.lockPrice &&
                 betInfo.position == Position.Bull) ||
                 (round.closePrice < round.lockPrice &&
@@ -638,29 +642,22 @@ contract BinaryMarket is
 
 
     // fixme why this not returning array of uint8?
-    // legendary - In that case, we might be confuse because solidity default value of uint8 is 0.
+    // legendary: OK Agree.
     /**
         @dev check if bet is active
      */
 
-    function getExecutableTimeframes() external view returns(string memory) {
-        string memory result = "";
-        uint256 count = 0;
+    function getExecutableTimeframes() external view returns(uint8[] memory result, uint256 count) {
+        result = new uint8[](timeframes.length);
 
         for (uint256 i = 0; i < timeframes.length; i = i + 1) {
             uint8 timeframeId = timeframes[i].id;
 
             if (isNecessaryToExecute(timeframeId)) {
-                if (count > 0) {
-                    result = string.concat(",", result, Strings.toString(timeframeId));
-                } else {
-                    result = string.concat(result, Strings.toString(timeframeId));
-                }
+                result[count] = timeframeId;
                 count = count + 1;
             }
         }
-
-        return result;
     }
 
     /**
@@ -683,5 +680,29 @@ contract BinaryMarket is
         }
 
         return (values, cursor + length);
+    }
+
+    /**
+     * @dev Caluclate current round based on genesis timestamp and block number
+     * @param timeframeId timeframe id what we want to get round number
+    */
+    function getCurrentUserRoundNumber(uint8 timeframeId) 
+        external 
+        view 
+        returns(uint256 roundFromBlockNumber, uint256 roundFromBlockTime )
+    {
+        roundFromBlockNumber = (block.number - genesisStartBlockNumber) / timeframes[timeframeId].intervalBlocks;
+        roundFromBlockTime = (block.timestamp - genesisStartBlockTimestamp) / timeframes[timeframeId].interval;
+    }
+
+    /**
+    * @dev Check if round is bettable
+    */
+    function isBettable(uint8 timeframeId, uint256 epoch)
+        external
+        view
+        returns(bool)
+    {
+        return _bettable(timeframeId, epoch);
     }
 }

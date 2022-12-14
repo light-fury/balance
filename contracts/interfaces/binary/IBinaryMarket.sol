@@ -31,5 +31,5 @@ interface IBinaryMarket {
         uint256 price
     ) external;
 
-    function getExecutableTimeframes() external view returns(string memory);
+    function getExecutableTimeframes() external view returns(uint8[] memory, uint256);
 }
